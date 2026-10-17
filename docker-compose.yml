@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16
+    container_name: memory-db
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-memory}
+      POSTGRES_USER: ${POSTGRES_USER:-memory}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-memory}
+    volumes:
+      - memory_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  migrate:
+    build: .
+    container_name: memory-migrate
+    env_file:
+      - .env
+    environment:
+      # Inside Compose, the DB host is the service name `db`, not localhost.
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-memory}:${POSTGRES_PASSWORD:-memory}@db:5432/${POSTGRES_DB:-memory}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["alembic", "upgrade", "head"]
+    profiles:
+      - migrate
+
+volumes:
+  memory_postgres_data:
