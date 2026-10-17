@@ -22,7 +22,7 @@ def database_url() -> str:
     url = (os.getenv("DATABASE_URL") or "").strip()
     if not url:
         raise RuntimeError(
-            "DATABASE_URL is required (e.g. postgresql+psycopg://memory:memory@127.0.0.1:5432/memory)"
+            "DATABASE_URL is required (see .env.example)"
         )
     return url
 

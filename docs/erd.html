@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Progress Memory — ERD</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a222c;
+      --panel-edge: #2a3542;
+      --ink: #e8eef4;
+      --muted: #8b9aab;
+      --pk: #3d9a78;
+      --fk: #c4a35a;
+      --line: #6a8499;
+      --accent: #7eb8d4;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+    }
+
+    .frame {
+      width: min(1180px, 100%);
+    }
+
+    header {
+      margin-bottom: 28px;
+    }
+
+    header .eyebrow {
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    header h1 {
+      font-size: 28px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    header p {
+      color: var(--muted);
+      font-size: 15px;
+      max-width: 44em;
+      line-height: 1.45;
+    }
+
+    .canvas {
+      position: relative;
+      width: 100%;
+      /* Fixed stage so arrow coords stay stable for screenshots */
+      height: 720px;
+    }
+
+    .wires {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      overflow: visible;
+    }
+
+    .wires path {
+      fill: none;
+      stroke: var(--line);
+      stroke-width: 1.75;
+    }
+
+    .wires text {
+      fill: var(--muted);
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-size: 11px;
+    }
+
+    .entity {
+      position: absolute;
+      z-index: 1;
+      background: var(--panel);
+      border: 1px solid var(--panel-edge);
+      border-radius: 4px;
+      overflow: hidden;
+      width: 280px;
+      box-shadow: 0 0 0 6px var(--bg);
+    }
+
+    .entity h2 {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--panel-edge);
+      background: #121820;
+      color: var(--accent);
+    }
+
+    .entity ul {
+      list-style: none;
+      padding: 6px 0 8px;
+    }
+
+    .entity li {
+      display: grid;
+      grid-template-columns: 22px 1fr auto;
+      gap: 6px;
+      align-items: baseline;
+      padding: 4px 14px;
+      font-size: 12.5px;
+      font-family: "IBM Plex Mono", "SF Mono", ui-monospace, monospace;
+      line-height: 1.35;
+    }
+
+    .entity li .mark {
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .entity li .mark.pk { color: var(--pk); }
+    .entity li .mark.fk { color: var(--fk); }
+    .entity li .col { color: var(--ink); }
+    .entity li .type { color: var(--muted); font-size: 11px; }
+
+    /* Positions tuned for arrow routes */
+    #users { left: 40px; top: 20px; }
+    #channels { left: 450px; top: 20px; }
+    #messages { left: 860px; top: 20px; }
+    #items { left: 40px; top: 340px; width: 520px; }
+    #history { left: 860px; top: 340px; }
+
+    .items-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .legend {
+      margin-top: 18px;
+      display: flex;
+      gap: 22px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .legend i {
+      font-style: normal;
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      font-weight: 600;
+      margin-right: 4px;
+    }
+
+    .legend .pk { color: var(--pk); }
+    .legend .fk { color: var(--fk); }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <header>
+      <div class="eyebrow">Company progress memory · M1</div>
+      <h1>Database schema</h1>
+      <p>Five tables. Current progress on <strong style="color:var(--ink);font-weight:500">items</strong>; named events in <strong style="color:var(--ink);font-weight:500">items_history</strong>; Telegram identity via <strong style="color:var(--ink);font-weight:500">user_channels</strong>.</p>
+    </header>
+
+    <div class="canvas" id="stage">
+      <svg class="wires" id="wires" aria-hidden="true">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#6a8499" />
+          </marker>
+        </defs>
+        <g id="wire-layer"></g>
+      </svg>
+
+      <section class="entity" id="users">
+        <h2>users</h2>
+        <ul>
+          <li><span class="mark pk">PK</span><span class="col">id</span><span class="type">string</span></li>
+          <li><span class="mark"></span><span class="col">name</span><span class="type">string?</span></li>
+          <li><span class="mark"></span><span class="col">timezone</span><span class="type">string</span></li>
+          <li><span class="mark"></span><span class="col">status</span><span class="type">enum</span></li>
+          <li><span class="mark"></span><span class="col">created_at</span><span class="type">timestamptz</span></li>
+          <li><span class="mark"></span><span class="col">updated_at</span><span class="type">timestamptz</span></li>
+        </ul>
+      </section>
+
+      <section class="entity" id="channels">
+        <h2>user_channels</h2>
+        <ul>
+          <li><span class="mark pk">PK</span><span class="col">id</span><span class="type">string</span></li>
+          <li><span class="mark fk">FK</span><span class="col">user_id</span><span class="type">→ users</span></li>
+          <li><span class="mark"></span><span class="col">platform</span><span class="type">enum</span></li>
+          <li><span class="mark"></span><span class="col">platform_user_id</span><span class="type">chat_id</span></li>
+          <li><span class="mark"></span><span class="col">is_primary</span><span class="type">bool</span></li>
+          <li><span class="mark"></span><span class="col">created_at</span><span class="type">timestamptz</span></li>
+          <li><span class="mark"></span><span class="col">updated_at</span><span class="type">timestamptz</span></li>
+        </ul>
+      </section>
+
+      <section class="entity" id="messages">
+        <h2>messages</h2>
+        <ul>
+          <li><span class="mark pk">PK</span><span class="col">id</span><span class="type">string</span></li>
+          <li><span class="mark fk">FK</span><span class="col">user_id</span><span class="type">→ users</span></li>
+          <li><span class="mark fk">FK</span><span class="col">user_channel_id</span><span class="type">→ channels</span></li>
+          <li><span class="mark"></span><span class="col">role</span><span class="type">user|assistant</span></li>
+          <li><span class="mark"></span><span class="col">text</span><span class="type">text</span></li>
+          <li><span class="mark"></span><span class="col">created_at</span><span class="type">timestamptz</span></li>
+        </ul>
+      </section>
+
+      <section class="entity" id="items">
+        <h2>items</h2>
+        <div class="items-cols">
+          <ul>
+            <li><span class="mark pk">PK</span><span class="col">id</span><span class="type">string</span></li>
+            <li><span class="mark fk">FK</span><span class="col">user_id</span><span class="type">→ users</span></li>
+            <li><span class="mark"></span><span class="col">type</span><span class="type">task|event</span></li>
+            <li><span class="mark"></span><span class="col">title</span><span class="type">string</span></li>
+            <li><span class="mark"></span><span class="col">description</span><span class="type">text?</span></li>
+            <li><span class="mark fk">FK</span><span class="col">parent_id</span><span class="type">→ items?</span></li>
+            <li><span class="mark"></span><span class="col">start_at</span><span class="type">timestamptz?</span></li>
+          </ul>
+          <ul>
+            <li><span class="mark"></span><span class="col">end_at</span><span class="type">timestamptz?</span></li>
+            <li><span class="mark"></span><span class="col">due_at</span><span class="type">timestamptz?</span></li>
+            <li><span class="mark"></span><span class="col">status</span><span class="type">enum</span></li>
+            <li><span class="mark"></span><span class="col">work_mode</span><span class="type">enum?</span></li>
+            <li><span class="mark"></span><span class="col">flags</span><span class="type">json</span></li>
+            <li><span class="mark"></span><span class="col">carried_since</span><span class="type">date?</span></li>
+            <li><span class="mark"></span><span class="col">created_at</span><span class="type">timestamptz</span></li>
+            <li><span class="mark"></span><span class="col">updated_at</span><span class="type">timestamptz</span></li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="entity" id="history">
+        <h2>items_history</h2>
+        <ul>
+          <li><span class="mark pk">PK</span><span class="col">id</span><span class="type">string</span></li>
+          <li><span class="mark fk">FK</span><span class="col">item_id</span><span class="type">→ items</span></li>
+          <li><span class="mark fk">FK</span><span class="col">message_id</span><span class="type">→ messages?</span></li>
+          <li><span class="mark"></span><span class="col">kind</span><span class="type">enum</span></li>
+          <li><span class="mark"></span><span class="col">source</span><span class="type">enum</span></li>
+          <li><span class="mark"></span><span class="col">changes</span><span class="type">json?</span></li>
+          <li><span class="mark"></span><span class="col">created_at</span><span class="type">timestamptz</span></li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="legend">
+      <span><i class="pk">PK</i> primary key</span>
+      <span><i class="fk">FK</i> foreign key</span>
+      <span>arrows show 1 → many</span>
+    </div>
+  </div>
+
+  <script>
+    function pt(el, side, offsetY) {
+      const stage = document.getElementById("stage").getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      const x =
+        side === "left" ? r.left - stage.left :
+        side === "right" ? r.right - stage.left :
+        (r.left + r.right) / 2 - stage.left;
+      let y =
+        side === "top" ? r.top - stage.top :
+        side === "bottom" ? r.bottom - stage.top :
+        (r.top + r.bottom) / 2 - stage.top;
+      if (offsetY) y += offsetY;
+      return { x, y };
+    }
+
+    function link(fromId, fromSide, toId, toSide, label, opts = {}) {
+      const a = pt(document.getElementById(fromId), fromSide, opts.fromY);
+      const b = pt(document.getElementById(toId), toSide, opts.toY);
+      const layer = document.getElementById("wire-layer");
+      const mx = (a.x + b.x) / 2 + (opts.dx || 0);
+      const my = (a.y + b.y) / 2 + (opts.dy || 0);
+
+      let d;
+      if (opts.route === "arch-up") {
+        const y = Math.min(a.y, b.y) - (opts.lift || 36);
+        d = `M ${a.x} ${a.y} L ${a.x} ${y} L ${b.x} ${y} L ${b.x} ${b.y}`;
+      } else {
+        d = `M ${a.x} ${a.y} C ${mx} ${a.y}, ${mx} ${b.y}, ${b.x} ${b.y}`;
+      }
+
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", d);
+      path.setAttribute("marker-end", "url(#arrow)");
+      layer.appendChild(path);
+
+      if (label) {
+        const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        const lx = opts.route === "arch-up" ? (a.x + b.x) / 2 : mx;
+        const ly = opts.route === "arch-up" ? Math.min(a.y, b.y) - (opts.lift || 36) - 6 : my - 8;
+        t.setAttribute("x", lx);
+        t.setAttribute("y", ly);
+        t.setAttribute("text-anchor", "middle");
+        t.textContent = label;
+        layer.appendChild(t);
+      }
+    }
+
+    function draw() {
+      document.getElementById("wire-layer").innerHTML = "";
+
+      link("users", "right", "channels", "left", "1 — ∞");
+      link("channels", "right", "messages", "left", "1 — ∞");
+      link("users", "bottom", "items", "top", "1 — ∞", { fromY: -20, toY: 0 });
+      link("users", "right", "messages", "left", "1 — ∞", {
+        route: "arch-up",
+        lift: 28,
+        fromY: -40,
+        toY: -40,
+      });
+      link("items", "right", "history", "left", "1 — ∞");
+      link("messages", "bottom", "history", "top", "0 — ∞");
+    }
+
+    window.addEventListener("load", draw);
+    window.addEventListener("resize", draw);
+  </script>
+</body>
+</html>

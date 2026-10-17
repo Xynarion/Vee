@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>item.py — Cursor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #1e1e1e;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .editor {
+      width: min(920px, 100%);
+      background: #1e1e1e;
+      color: #d4d4d4;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .titlebar {
+      height: 38px;
+      background: #323233;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 8px;
+      border-bottom: 1px solid #1e1e1e;
+      flex-shrink: 0;
+    }
+
+    .traffic {
+      display: flex;
+      gap: 6px;
+      margin-right: 10px;
+    }
+
+    .traffic i {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: block;
+    }
+
+    .traffic .r { background: #ff5f57; }
+    .traffic .y { background: #febc2e; }
+    .traffic .g { background: #28c840; }
+
+    .tab {
+      background: #1e1e1e;
+      color: #cccccc;
+      font-size: 13px;
+      padding: 8px 14px 7px;
+      border-top: 1px solid #0078d4;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 35px;
+      margin-top: 3px;
+    }
+
+    .tab .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 1px;
+      background: #519aba;
+    }
+
+    .tab .x {
+      color: #808080;
+      font-size: 14px;
+      line-height: 1;
+      margin-left: 4px;
+    }
+
+    .breadcrumb {
+      height: 22px;
+      background: #1e1e1e;
+      color: #bbbbbb;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 6px;
+      border-bottom: 1px solid #2b2b2b;
+      flex-shrink: 0;
+    }
+
+    .breadcrumb span { color: #bbbbbb; }
+    .breadcrumb .sep { color: #6e6e6e; }
+
+    .code-wrap {
+      display: flex;
+      flex: 1;
+      overflow: auto;
+      background: #1e1e1e;
+      font-family: "SF Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
+      font-size: 13px;
+      line-height: 20px;
+      padding: 8px 0 32px;
+    }
+
+    .gutter {
+      flex: 0 0 52px;
+      text-align: right;
+      padding-right: 16px;
+      color: #858585;
+      user-select: none;
+      white-space: pre;
+    }
+
+    .code {
+      flex: 1;
+      padding-right: 24px;
+      white-space: pre;
+      tab-size: 4;
+    }
+
+    /* VS Code Dark+ inspired tokens */
+    .k { color: #569cd6; }      /* keyword */
+    .n { color: #4ec9b0; }      /* class / type name */
+    .f { color: #dcdcaa; }      /* function / call */
+    .s { color: #ce9178; }      /* string */
+    .c { color: #6a9955; }      /* comment */
+    .p { color: #d4d4d4; }      /* plain */
+    .o { color: #d4d4d4; }      /* operator punctuation */
+    .b { color: #9cdcfe; }      /* attribute / param-ish */
+    .m { color: #b5cea8; }      /* number */
+    .d { color: #c586c0; }      /* def/class keyword sometimes purple in python */
+  </style>
+</head>
+<body>
+  <div class="editor">
+    <div class="titlebar">
+      <div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+      <div class="tab">
+        <span class="dot"></span>
+        item.py
+        <span class="x">×</span>
+      </div>
+    </div>
+    <div class="breadcrumb">
+      <span>memory</span><span class="sep">›</span>
+      <span>models</span><span class="sep">›</span>
+      <span>item.py</span>
+    </div>
+    <div class="code-wrap">
+      <div class="gutter" id="gutter"></div>
+      <pre class="code" id="code"></pre>
+    </div>
+  </div>
+
+  <script>
+    const lines = [
+      [`<span class="k">from</span> __future__ <span class="k">import</span> annotations`],
+      [``],
+      [`<span class="k">from</span> sqlalchemy <span class="k">import</span> Column, Date, DateTime, Enum, ForeignKey, Index, JSON, String, Text`],
+      [`<span class="k">from</span> sqlalchemy.orm <span class="k">import</span> relationship`],
+      [`<span class="k">from</span> sqlalchemy.sql <span class="k">import</span> func`],
+      [``],
+      [`<span class="k">from</span> .base <span class="k">import</span> Base`],
+      [``],
+      [``],
+      [`<span class="k">class</span> <span class="n">Item</span>(Base):`],
+      [`    __tablename__ = <span class="s">"items"</span>`],
+      [``],
+      [`    <span class="c"># --- core ---</span>`],
+      [`    id = <span class="f">Column</span>(<span class="f">String</span>(<span class="m">64</span>), primary_key=<span class="k">True</span>)`],
+      [``],
+      [`    user_id = <span class="f">Column</span>(<span class="f">String</span>(<span class="m">64</span>), <span class="f">ForeignKey</span>(<span class="s">"users.id"</span>), nullable=<span class="k">False</span>, index=<span class="k">True</span>)`],
+      [``],
+      [`    type = <span class="f">Column</span>(`],
+      [`        <span class="f">Enum</span>(<span class="s">"task"</span>, <span class="s">"event"</span>, name=<span class="s">"item_type_enum"</span>),`],
+      [`        nullable=<span class="k">False</span>,`],
+      [`    )`],
+      [``],
+      [`    title = <span class="f">Column</span>(<span class="f">String</span>(<span class="m">255</span>), nullable=<span class="k">False</span>)`],
+      [`    description = <span class="f">Column</span>(<span class="f">Text</span>, nullable=<span class="k">True</span>)`],
+      [``],
+      [`    parent_id = <span class="f">Column</span>(<span class="f">String</span>(<span class="m">64</span>), <span class="f">ForeignKey</span>(<span class="s">"items.id"</span>), nullable=<span class="k">True</span>, index=<span class="k">True</span>)`],
+      [``],
+      [`    start_at = <span class="f">Column</span>(<span class="f">DateTime</span>(timezone=<span class="k">True</span>), nullable=<span class="k">True</span>)`],
+      [`    end_at = <span class="f">Column</span>(<span class="f">DateTime</span>(timezone=<span class="k">True</span>), nullable=<span class="k">True</span>)`],
+      [`    due_at = <span class="f">Column</span>(<span class="f">DateTime</span>(timezone=<span class="k">True</span>), nullable=<span class="k">True</span>)`],
+      [``],
+      [`    status = <span class="f">Column</span>(`],
+      [`        <span class="f">Enum</span>(`],
+      [`            <span class="s">"todo"</span>,`],
+      [`            <span class="s">"in_progress"</span>,`],
+      [`            <span class="s">"blocked"</span>,`],
+      [`            <span class="s">"completed"</span>,`],
+      [`            <span class="s">"dropped"</span>,`],
+      [`            <span class="s">"cancelled"</span>,`],
+      [`            name=<span class="s">"item_status_enum"</span>,`],
+      [`        ),`],
+      [`        nullable=<span class="k">False</span>,`],
+      [`        default=<span class="s">"todo"</span>,`],
+      [`    )`],
+      [``],
+      [`    work_mode = <span class="f">Column</span>(`],
+      [`        <span class="f">Enum</span>(`],
+      [`            <span class="s">"research"</span>,`],
+      [`            <span class="s">"building"</span>,`],
+      [`            <span class="s">"marketing"</span>,`],
+      [`            <span class="s">"personal"</span>,`],
+      [`            name=<span class="s">"item_work_mode_enum"</span>,`],
+      [`        ),`],
+      [`        nullable=<span class="k">True</span>,`],
+      [`        index=<span class="k">True</span>,`],
+      [`    )`],
+      [``],
+      [`    flags = <span class="f">Column</span>(<span class="f">JSON</span>, nullable=<span class="k">False</span>, default=list)`],
+      [`    carried_since = <span class="f">Column</span>(<span class="f">Date</span>, nullable=<span class="k">True</span>)`],
+      [``],
+      [`    <span class="c"># --- meta ---</span>`],
+      [`    created_at = <span class="f">Column</span>(<span class="f">DateTime</span>(timezone=<span class="k">True</span>), nullable=<span class="k">False</span>, server_default=func.now())`],
+      [`    updated_at = <span class="f">Column</span>(`],
+      [`        <span class="f">DateTime</span>(timezone=<span class="k">True</span>),`],
+      [`        nullable=<span class="k">False</span>,`],
+      [`        server_default=func.now(),`],
+      [`        onupdate=func.now(),`],
+      [`    )`],
+      [``],
+      [`    user = <span class="f">relationship</span>(<span class="s">"User"</span>, back_populates=<span class="s">"items"</span>)`],
+      [`    history = <span class="f">relationship</span>(<span class="s">"ItemHistory"</span>, back_populates=<span class="s">"item"</span>)`],
+      [`    parent = <span class="f">relationship</span>(<span class="s">"Item"</span>, remote_side=[id])`],
+      [``],
+      [`    __table_args__ = (`],
+      [`        <span class="f">Index</span>(<span class="s">"idx_items_status"</span>, <span class="s">"user_id"</span>, <span class="s">"status"</span>),`],
+      [`        <span class="f">Index</span>(<span class="s">"idx_items_user_due"</span>, <span class="s">"user_id"</span>, <span class="s">"due_at"</span>),`],
+      [`        <span class="f">Index</span>(<span class="s">"idx_items_user_start"</span>, <span class="s">"user_id"</span>, <span class="s">"start_at"</span>),`],
+      [`        <span class="f">Index</span>(<span class="s">"idx_items_user_carried"</span>, <span class="s">"user_id"</span>, <span class="s">"carried_since"</span>),`],
+      [`        <span class="f">Index</span>(<span class="s">"idx_items_parent"</span>, <span class="s">"parent_id"</span>),`],
+      [`    )`],
+    ];
+
+    const gutter = document.getElementById("gutter");
+    const code = document.getElementById("code");
+    gutter.textContent = lines.map((_, i) => String(i + 1)).join("\n");
+    code.innerHTML = lines.map((l) => l[0] || " ").join("\n");
+  </script>
+</body>
+</html>
