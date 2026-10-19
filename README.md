@@ -58,31 +58,28 @@ The capabilities and requirements here came out of that research.
 
 ## Current Status
 
-**M1 complete** — Postgres schema, Alembic migrations, and persistence smoke tests pass.
+**M1 complete** — Postgres schema, Alembic, persistence smoke tests.
 
-The mechanism can create users/channels from a platform identity, store conversation turns, and write items + history.
+**M2 complete** — Telegram webhook (FastAPI): receive → store via ingress → reply `you said: …`.
 
-**Next: M2** — Telegram transport (receive message → store → reply).
+**Next: M3** — assemble interaction state (message + recent turns + items + prompt).
 
 Full milestone list (M1–M8): [MILESTONES.md](MILESTONES.md).
 
 ## M1 — local setup
 
-Postgres runs in Docker. Python (venv) stays on the host for now.
+Postgres runs in Docker. App can run on the host or in Compose.
 
 ```bash
 cd company-progress-memory-mechanism
-cp .env.example .env
+cp .env.example .env   # fill secrets; keep .env out of git
 
-# Start Postgres
 docker compose up -d db
 
-# App deps on the host
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# Schema (pick one)
 alembic upgrade head
 # or: docker compose --profile migrate run --rm migrate
 
@@ -91,4 +88,25 @@ pytest
 
 Stop DB: `docker compose down` (add `-v` to wipe the volume).
 
-Schema lives in `memory/models/`. Migrations in `alembic/versions/`. Runtime engine/session in `memory/db.py`.
+## M2 — Telegram webhook
+
+1. Put `TELEGRAM_BOT_TOKEN`, `WEBHOOK_URL`, and `TELEGRAM_WEBHOOK_SECRET` in `.env`.
+2. Start DB (and migrate if needed), then the app:
+
+```bash
+docker compose up -d db app
+# or on the host: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+3. Tunnel to the app (host ngrok):
+
+```bash
+ngrok http 8000
+```
+
+4. Set `WEBHOOK_URL` to the ngrok HTTPS origin (no path), restart the app so lifespan re-registers `setWebhook`.
+5. Message the bot → expect `you said: …` and a row in `messages`.
+
+Webhook path: `{WEBHOOK_URL}/telegram/webhook`. Health: `GET /health`.
+
+Schema: `memory/models/`. Ops: `memory/operations/`. Transport: `api/telegram/`.

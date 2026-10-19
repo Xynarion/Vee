@@ -24,7 +24,6 @@ services:
     env_file:
       - .env
     environment:
-      # Inside Compose, the DB host is the service name `db`, not localhost.
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-memory}:${POSTGRES_PASSWORD:-memory}@db:5432/${POSTGRES_DB:-memory}
     depends_on:
       db:
@@ -32,6 +31,20 @@ services:
     command: ["alembic", "upgrade", "head"]
     profiles:
       - migrate
+
+  app:
+    build: .
+    container_name: memory-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-memory}:${POSTGRES_PASSWORD:-memory}@db:5432/${POSTGRES_DB:-memory}
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   memory_postgres_data:

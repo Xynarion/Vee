@@ -14,7 +14,7 @@
 ## Progress
 
 - [x] M1 — Foundation & Postgres
-- [ ] M2 — Telegram transport
+- [x] M2 — Telegram transport
 - [ ] M3 — Build interaction state
 - [ ] M4 — LLM contract
 - [ ] M5 — Maintain memory
