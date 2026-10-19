@@ -31,7 +31,13 @@ def create_message(
     return message
 
 
-def recent_messages(db: Session, user_id: str, *, limit: int = STATE_HISTORY_WINDOW) -> list[Message]:
+def list_recent_messages(
+    db: Session,
+    user_id: str,
+    *,
+    limit: int = STATE_HISTORY_WINDOW,
+) -> list[Message]:
+    """Return the latest messages for a user, oldest-first within the window."""
     rows = db.scalars(
         select(Message)
         .where(Message.user_id == user_id)

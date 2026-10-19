@@ -11,7 +11,7 @@ from sqlalchemy import inspect, text
 from memory.db import db_session, get_engine
 from memory.models import Item, ItemHistory, Message, User, UserChannel
 from memory.operations.ingress import ingress_turn
-from memory.operations.messages import recent_messages
+from memory.operations.messages import list_recent_messages
 
 
 pytestmark = pytest.mark.skipif(
@@ -72,7 +72,7 @@ def test_ingress_round_trip() -> None:
         assert message.role == "user"
         assert message.text == text
 
-        recent = recent_messages(db, user.id, limit=5)
+        recent = list_recent_messages(db, user.id, limit=5)
         assert any(m.id == message.id for m in recent)
 
 

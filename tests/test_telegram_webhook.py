@@ -65,6 +65,7 @@ def test_webhook_stores_and_echoes(client: TestClient) -> None:
     )
     with (
         patch("api.telegram.webhook.ingress_turn", return_value=turn) as ingress,
+        patch("api.telegram.webhook.assemble_interaction_state") as assemble,
         patch("api.telegram.webhook.send_message", new_callable=AsyncMock) as send,
     ):
         response = client.post(
@@ -81,4 +82,5 @@ def test_webhook_stores_and_echoes(client: TestClient) -> None:
         role="user",
         text="hello memory",
     )
+    assemble.assert_called_once_with(turn)
     send.assert_awaited_once_with(chat_id="42", text="you said: hello memory")

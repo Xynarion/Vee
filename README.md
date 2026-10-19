@@ -62,7 +62,9 @@ The capabilities and requirements here came out of that research.
 
 **M2 complete** — Telegram webhook (FastAPI): receive → store via ingress → reply `you said: …`.
 
-**Next: M3** — assemble interaction state (message + recent turns + items + prompt).
+**M3 complete** — assemble interaction state (current message + recent turns + active items + prompt string).
+
+**Next: M4** — validated LLM contract (one call, structured result, no retry).
 
 Full milestone list (M1–M8): [MILESTONES.md](MILESTONES.md).
 
@@ -109,4 +111,12 @@ ngrok http 8000
 
 Webhook path: `{WEBHOOK_URL}/telegram/webhook`. Health: `GET /health`.
 
-Schema: `memory/models/`. Ops: `memory/operations/`. Transport: `api/telegram/`.
+## M3 — Interaction state
+
+After ingress, `assemble_interaction_state(turn)` loads recent messages (excluding the current one), active items (`todo` / `in_progress`), and renders a deterministic prompt string for M4.
+
+```bash
+pytest tests/test_interaction_state.py
+```
+
+Schema: `memory/models/`. Ops: `memory/operations/` (incl. `state.py`). Transport: `api/telegram/`.
