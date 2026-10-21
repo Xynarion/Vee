@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from memory.db import new_id
 from memory.models import Message
-from memory.operations.constants import STATE_HISTORY_WINDOW
+from settings import STATE_HISTORY_WINDOW
 
 
 def create_message(

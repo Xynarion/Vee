@@ -6,7 +6,7 @@ from typing import Iterable, Sequence
 
 from memory.db import db_session
 from memory.models import Item, Message
-from memory.operations.constants import STATE_HISTORY_WINDOW
+from settings import STATE_HISTORY_WINDOW
 from memory.operations.items import list_current_items
 from memory.operations.messages import list_recent_messages
 from memory.types import InteractionState, ItemSnapshot, Turn, TurnSnapshot

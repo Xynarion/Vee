@@ -17,3 +17,8 @@ build/
 *.sqlite3
 *.pem
 *.key
+
+# Private while milestones are public (local only)
+docs/thinking-loop.md
+docs/m4-thinking-test-cases.md
+docs/m4-remembering-test-cases.md

@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from memory.models import Item
-from memory.operations.constants import ACTIVE_STATUSES
+from constants import ACTIVE_STATUSES
 
 
 def list_current_items(db: Session, user_id: str) -> list[Item]:

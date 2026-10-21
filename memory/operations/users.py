@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from memory.db import new_id
 from memory.models import User, UserChannel
-from memory.operations.constants import DEFAULT_TIMEZONE
+from settings import DEFAULT_TIMEZONE
 
 
 def get_or_create_user(
