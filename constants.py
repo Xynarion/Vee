@@ -23,10 +23,6 @@ ITEM_WORK_MODES = frozenset({"research", "building", "marketing", "personal"})
 # Matches memory.db.new_id("itm") → itm_ + 16 hex chars
 ITEM_ID_RE = re.compile(r"^itm_[0-9a-f]{16}$")
 
-# --- Reflect allowlist (LLM plan → app executes) ---
-
-TOOL_NAMES = frozenset({"add_item", "update_item", "search_items"})
-
 # --- Retrieve / testify (M6+) ---
 
 WORKLOAD_BUCKETS = ("today", "past", "future", "unset")

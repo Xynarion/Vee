@@ -2,20 +2,19 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional
+from typing import List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from constants import ITEM_ID_RE, ITEM_STATUSES, TOOL_NAMES
+from constants import ITEM_ID_RE
+from tools import ToolCall
 
-IntentKind = Literal["think", "remember", "irrelevant"]
-WriteOperation = Literal["add", "update", "complete", "cancel"]
+IntentKind = Literal["brain_dump", "remember", "irrelevant"]
 ConflictType = Literal["ambiguous_target", "conflicting_fact"]
 ResponseType = Literal["confirmation", "clarification", "testify", "silence"]
-ViewIntention = Literal["alignment", "reflection"]
-ViewShape = Literal["inventory", "timeline", "outcome", "pattern"]
-ViewOrder = Literal["chronological", "reverse_chronological", "priority", "natural"]
-ToolName = Literal["add_item", "update_item", "search_items"]
+RecallIntention = Literal["alignment", "reflection"]
+RecallShape = Literal["inventory", "timeline", "outcome", "pattern"]
+RecallOrder = Literal["chronological", "reverse_chronological", "priority", "natural"]
 
 
 def assert_item_ids(ids: List[str], *, field_name: str) -> List[str]:
@@ -32,12 +31,6 @@ def assert_item_ids(ids: List[str], *, field_name: str) -> List[str]:
             f"invalid: {', '.join(bad)}"
         )
     return ids
-
-
-class Continuity(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    summary: str  # discourse: resolve | continue | change | idle (+ what)
 
 
 class Intent(BaseModel):
@@ -71,40 +64,13 @@ class Conflict(BaseModel):
         return assert_item_ids(v, field_name="candidate_ids")
 
 
-class ToolCall(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    name: ToolName
-    args: Dict[str, Any] = Field(default_factory=dict)
-
-    @field_validator("args")
-    @classmethod
-    def validate_args(cls, args: Dict[str, Any]) -> Dict[str, Any]:
-        if "status" in args and args["status"] is not None:
-            status = args["status"]
-            if status not in ITEM_STATUSES:
-                raise ValueError(
-                    f"invalid status {status!r}; use one of {sorted(ITEM_STATUSES)}"
-                )
-        if "id" in args and args["id"] is not None:
-            item_id = args["id"]
-            if not isinstance(item_id, str) or not ITEM_ID_RE.match(item_id):
-                raise ValueError(
-                    f"args.id must be a DB item id matching itm_[0-9a-f]{{16}}; "
-                    f"got {item_id!r}"
-                )
-        return args
-
-
 class WritePlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    operation: Optional[WriteOperation] = None
     target_ids: List[str] = Field(default_factory=list)
     missing: List[MissingFact] = Field(default_factory=list)
     conflicts: List[Conflict] = Field(default_factory=list)
     duplicate_ids: List[str] = Field(default_factory=list)
-    tool_calls: List[ToolCall] = Field(default_factory=list)
 
     @field_validator("target_ids", "duplicate_ids")
     @classmethod
@@ -119,12 +85,12 @@ class Scope(BaseModel):
     end: Optional[str] = None
 
 
-class ViewPlan(BaseModel):
+class RecallPlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    intention: Optional[ViewIntention] = None
-    shape: Optional[ViewShape] = None
-    order: Optional[ViewOrder] = None
+    intention: Optional[RecallIntention] = None
+    shape: Optional[RecallShape] = None
+    order: Optional[RecallOrder] = None
     scope: Scope = Field(default_factory=Scope)
 
 
@@ -144,15 +110,9 @@ class ResponsePlan(BaseModel):
 class Decision(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    continuity: Continuity
     intent: Intent
     write: WritePlan
-    view: ViewPlan
+    recall: RecallPlan
+    tool_calls: List[ToolCall] = Field(default_factory=list)
     response: ResponsePlan
 
-    @model_validator(mode="after")
-    def check_tool_allowlist(self) -> "Decision":
-        for call in self.write.tool_calls:
-            if call.name not in TOOL_NAMES:
-                raise ValueError(f"tool not allowlisted: {call.name}")
-        return self
