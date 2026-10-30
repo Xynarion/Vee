@@ -143,7 +143,7 @@ def test_valid_target_and_show_ids_accepted() -> None:
     payload["tool_calls"] = [
         {
             "name": "update_item",
-            "args": {"id": item_id, "title": "Call the doctor", "status": "completed"},
+            "args": {"id": item_id, "status": "completed"},
         }
     ]
     payload["response"]["show_ids"] = [item_id]

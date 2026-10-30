@@ -52,37 +52,42 @@ def test_add_item_bad_enum_rejected() -> None:
 
 
 def test_update_item_changes_exclude_omitted_fields() -> None:
-    args = UpdateItemArgs(id=ITEM_ID, title="Chase Acme", due_at="2026-10-22T00:00:00+01:00")
+    args = UpdateItemArgs(id=ITEM_ID, due_at="2026-10-22T00:00:00+01:00")
     assert set(args.changes()) == {"due_at"}
 
 
 def test_update_item_null_clears() -> None:
-    args = UpdateItemArgs(id=ITEM_ID, title="Chase Acme", due_at=None)
+    args = UpdateItemArgs(id=ITEM_ID, due_at=None)
     assert args.changes() == {"due_at": None}
 
 
-def test_update_item_null_new_title_is_not_a_rename() -> None:
-    args = UpdateItemArgs(id=ITEM_ID, title="Chase Acme", new_title=None, status="completed")
-    assert args.changes() == {"status": "completed"}
+def test_update_item_title_is_a_rename() -> None:
+    args = UpdateItemArgs(id=ITEM_ID, title="Chase the Acme invoice")
+    assert args.changes() == {"title": "Chase the Acme invoice"}
 
 
 def test_update_item_without_changes_rejected() -> None:
     with pytest.raises(ValidationError):
-        UpdateItemArgs(id=ITEM_ID, title="Chase Acme")
-    with pytest.raises(ValidationError):
-        UpdateItemArgs(id=ITEM_ID, title="Chase Acme", new_title=None)
+        UpdateItemArgs(id=ITEM_ID)
 
 
-def test_update_item_cannot_clear_status_or_type() -> None:
+def test_update_item_new_title_rejected() -> None:
     with pytest.raises(ValidationError):
-        UpdateItemArgs(id=ITEM_ID, title="Chase Acme", status=None)
+        UpdateItemArgs(id=ITEM_ID, new_title="Chase the Acme invoice", status="completed")
+
+
+def test_update_item_cannot_clear_title_status_or_type() -> None:
     with pytest.raises(ValidationError):
-        UpdateItemArgs(id=ITEM_ID, title="Chase Acme", type=None)
+        UpdateItemArgs(id=ITEM_ID, title=None, status="completed")
+    with pytest.raises(ValidationError):
+        UpdateItemArgs(id=ITEM_ID, status=None)
+    with pytest.raises(ValidationError):
+        UpdateItemArgs(id=ITEM_ID, type=None)
 
 
 def test_update_item_bad_id_rejected() -> None:
     with pytest.raises(ValidationError):
-        UpdateItemArgs(id="Chase Acme", title="Chase Acme", status="completed")
+        UpdateItemArgs(id="Chase Acme", status="completed")
 
 
 # --- search_items ---

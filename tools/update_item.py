@@ -12,21 +12,20 @@ from tools import _fields
 NAME = "update_item"
 
 # DB columns that cannot be cleared
-_NOT_CLEARABLE = ("type", "status")
+_NOT_CLEARABLE = ("title", "type", "status")
 
 
 class UpdateItemArgs(BaseModel):
-    """`id` + current `title` identify the row.
+    """`id` identifies the row. A sent `title` is the new name; omit it to keep the current one.
 
-    Omitted field = unchanged; null = clear. `new_title: null` = no rename.
+    Omitted field = unchanged; null = clear. `title` cannot be cleared.
     Executors must read changes via `changes()`, never a plain model_dump().
     """
 
     model_config = ConfigDict(extra="forbid")
 
     id: str
-    title: str
-    new_title: Optional[str] = None
+    title: Optional[str] = None
     type: Optional[str] = None
     parent_id: Optional[str] = None
     start_at: Optional[AwareDatetime] = None
@@ -40,10 +39,10 @@ class UpdateItemArgs(BaseModel):
     def check_id(cls, v: str) -> str:
         return _fields.item_id(v, field_name="id")
 
-    @field_validator("title", "new_title")
+    @field_validator("title")
     @classmethod
-    def check_titles(cls, v: Optional[str], info) -> Optional[str]:
-        return _fields.non_empty(v, field_name=info.field_name)
+    def check_title(cls, v: Optional[str]) -> Optional[str]:
+        return _fields.non_empty(v, field_name="title")
 
     @field_validator("type")
     @classmethod
@@ -75,11 +74,8 @@ class UpdateItemArgs(BaseModel):
         return self
 
     def changes(self) -> dict:
-        """Fields the model actually sent, excluding identity and a null rename."""
-        sent = self.model_dump(exclude_unset=True, exclude={"id", "title"})
-        if sent.get("new_title", "") is None:
-            del sent["new_title"]
-        return sent
+        """Fields the model actually sent, excluding the id."""
+        return self.model_dump(exclude_unset=True, exclude={"id"})
 
 
 class UpdateItemCall(BaseModel):
