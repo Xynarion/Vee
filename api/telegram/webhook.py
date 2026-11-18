@@ -1,7 +1,8 @@
-"""POST /telegram/webhook — receive update, store turn, echo reply."""
+"""POST /telegram/webhook — receive update, store turn, assemble, infer, accept, echo reply."""
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from typing import Any, Dict, Optional, Tuple
@@ -9,6 +10,8 @@ from typing import Any, Dict, Optional, Tuple
 from fastapi import APIRouter, Header, HTTPException, Request
 
 from api.telegram.client import send_message
+from llm.infer import infer_decision
+from llm.validate import accept_model_output
 from memory.operations.ingress import ingress_turn
 from memory.operations.state import assemble_interaction_state
 
@@ -38,15 +41,18 @@ async def telegram_webhook(
     request: Request,
     x_telegram_bot_api_secret_token: Optional[str] = Header(default=None),
 ) -> Dict[str, str]:
+    # 1. Authenticate. Reject the update unless Telegram's secret matches.
     expected = _webhook_secret()
     if not expected or x_telegram_bot_api_secret_token != expected:
         raise HTTPException(status_code=401, detail="invalid webhook secret")
 
+    # 2. Keep text messages. Photos, stickers, and empty updates stop here.
     update = await request.json()
     extracted = _extract_text_message(update)
     if extracted is None:
         return {"status": "ignored"}
 
+    # 3. Persist the founder's turn. Resolve the user and store the message.
     chat_id, text = extracted
     turn = ingress_turn(
         platform="telegram",
@@ -54,6 +60,9 @@ async def telegram_webhook(
         role="user",
         text=text,
     )
+
+    # 4. Assemble the Interaction State: message, recent turns, Progress Memory, clock, this week, last week.
+    state = None
     try:
         state = assemble_interaction_state(turn)
         logger.info(
@@ -65,5 +74,29 @@ async def telegram_webhook(
     except Exception:
         logger.exception("assemble_interaction_state failed; continuing with echo")
 
+    # 5. One Together call. Qwen3.5-9B reads that plate and returns Decision JSON.
+    result = None
+    if state is not None:
+        try:
+            result = await asyncio.to_thread(infer_decision, state.prompt)
+            logger.info(
+                "decision json ready: model=%s chars=%s latency_s=%s",
+                result.model,
+                result.raw_text,
+                result.latency_s,
+            )
+        except Exception:
+            logger.exception("infer_decision failed; continuing with echo")
+
+    # 6. Validate. Parse the JSON into a Decision, or use the clarification fallback. No retry.
+    if result is not None:
+        decision = accept_model_output(result.raw_text)
+        logger.info(
+            "decision accepted: say=%s tool_calls=%s",
+            decision.say.types,
+            len(decision.plan.tool_calls),
+        )
+
+    # 7. Reply. Still the echo. The Decision is logged, not sent.
     await send_message(chat_id=chat_id, text=f"you said: {text}")
     return {"status": "ok"}
