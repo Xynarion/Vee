@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 
 @dataclass(frozen=True)
@@ -31,8 +31,17 @@ class TurnSnapshot:
 
 
 @dataclass(frozen=True)
+class HistorySnapshot:
+    """One recorded change on an item (no ORM)."""
+
+    kind: str
+    at: datetime
+    changes: Optional[Dict[str, Any]] = None
+
+
+@dataclass(frozen=True)
 class ItemSnapshot:
-    """Active progress item for the prompt (no ORM)."""
+    """Progress Memory item for the prompt (no ORM)."""
 
     id: str
     type: str
@@ -40,6 +49,9 @@ class ItemSnapshot:
     status: str
     work_mode: Optional[str]
     due_at: Optional[datetime]
+    start_at: Optional[datetime] = None
+    end_at: Optional[datetime] = None
+    history: Tuple[HistorySnapshot, ...] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True)

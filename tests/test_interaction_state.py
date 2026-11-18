@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import os
 import uuid
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 import pytest
 
 from memory.db import db_session, new_id
-from memory.models import Item
+from memory.models import Item, ItemHistory
 from memory.operations.ingress import ingress_turn
 from memory.operations.state import assemble_interaction_state
 
@@ -17,6 +19,8 @@ pytestmark = pytest.mark.skipif(
     not (os.getenv("DATABASE_URL") or "").strip(),
     reason="DATABASE_URL is required for Postgres interaction-state tests",
 )
+
+CLOCK = datetime(2026, 11, 14, 16, 45, tzinfo=ZoneInfo("Europe/London"))
 
 
 def test_assemble_interaction_state_prompt_ready() -> None:
@@ -44,6 +48,8 @@ def test_assemble_interaction_state_prompt_ready() -> None:
     active_invoice_id = new_id("itm")
     active_landing_id = new_id("itm")
     completed_id = new_id("itm")
+    family_id = new_id("itm")
+    family_start = datetime(2026, 11, 15, 17, 0, tzinfo=timezone.utc)
 
     with db_session() as db:
         db.add_all(
@@ -72,7 +78,35 @@ def test_assemble_interaction_state_prompt_ready() -> None:
                     status="completed",
                     flags=[],
                 ),
+                Item(
+                    id=family_id,
+                    user_id=prior_a.user_id,
+                    type="event",
+                    title="Family meeting",
+                    status="todo",
+                    start_at=family_start,
+                    flags=[],
+                ),
             ]
+        )
+        db.flush()
+        db.add(
+            ItemHistory(
+                id=new_id("hst"),
+                item_id=completed_id,
+                kind="created",
+                source="user_message",
+                created_at=datetime(2026, 11, 10, 12, 0, tzinfo=ZoneInfo("Europe/London")),
+            )
+        )
+        db.add(
+            ItemHistory(
+                id=new_id("hst"),
+                item_id=completed_id,
+                kind="completed",
+                source="user_message",
+                created_at=datetime(2026, 11, 14, 9, 15, tzinfo=ZoneInfo("Europe/London")),
+            )
         )
 
     current = ingress_turn(
@@ -82,24 +116,11 @@ def test_assemble_interaction_state_prompt_ready() -> None:
         text="Need to chase the Stripe onboarding email.",
     )
 
-    state = assemble_interaction_state(current)
+    state = assemble_interaction_state(current, now=CLOCK)
 
-    # Visible with: pytest tests/test_interaction_state.py -s
     print("\n" + "=" * 60)
     print("INTERACTION STATE (M3) — screenshot me")
     print("=" * 60)
-    print(f"current.message_id : {state.turn.message_id}")
-    print(f"current.role       : {state.turn.role}")
-    print(f"current.text       : {state.turn.text}")
-    print(f"recent_turns       : {len(state.recent_turns)}")
-    for t in state.recent_turns:
-        print(f"  [{t.role}] {t.text}")
-    print(f"current_items      : {len(state.current_items)}")
-    for i in state.current_items:
-        print(f"  {i.status:12} {i.type:6} | {i.title} ({i.id})")
-    print("-" * 60)
-    print("PROMPT")
-    print("-" * 60)
     print(state.prompt)
     print("=" * 60 + "\n")
 
@@ -119,18 +140,28 @@ def test_assemble_interaction_state_prompt_ready() -> None:
     item_titles = {i.title for i in state.current_items}
     assert active_invoice_id in item_ids
     assert active_landing_id in item_ids
-    assert completed_id not in item_ids
-    assert "Archive old pitch deck" not in item_titles
-    assert all(i.status in {"todo", "in_progress"} for i in state.current_items)
+    assert completed_id in item_ids
+    assert family_id in item_ids
+    assert "Archive old pitch deck" in item_titles
 
     prompt = state.prompt
-    assert "## Current message" in prompt
-    assert "Need to chase the Stripe onboarding email." in prompt
-    assert "## Recent turns" in prompt
-    assert "[user] Yesterday I shipped the pricing page." in prompt
-    assert "[assistant] Noted the pricing page ship." in prompt
-    assert "## Current items" in prompt
+    assert prompt.startswith("------------------------\nThe Interaction State")
+    assert 'Current message:\n"Need to chase the Stripe onboarding email."' in prompt
+    assert "Recent conversation:" in prompt
+    assert "Founder: Yesterday I shipped the pricing page." in prompt
+    assert "Vee: Noted the pricing page ship." in prompt
+    assert "Founder: Still blocked on Stripe keys." in prompt
+    assert "Progress Memory:" in prompt
     assert "Pay server invoice" in prompt
     assert active_invoice_id in prompt
     assert "Polish landing hero" in prompt
-    assert "Archive old pitch deck" not in prompt
+    assert "Archive old pitch deck" in prompt
+    assert f"{completed_id} | task | completed | Archive old pitch deck" in prompt
+    assert "history: created 2026-11-10 12:00; completed 2026-11-14 09:15" in prompt
+    assert f"{family_id} | event | todo | Family meeting | start 2026-11-15T17:00:00+00:00" in prompt
+    assert "16:45, Saturday 14 November 2026, Europe/London" in prompt
+    assert "This calendar week (current week):\n2026-11-09 → 2026-11-15" in prompt
+    assert "Last calendar week (previous week):\n2026-11-02 → 2026-11-08" in prompt
+    assert current.text not in [
+        t.text for t in state.recent_turns
+    ]
