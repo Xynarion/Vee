@@ -46,5 +46,17 @@ services:
       db:
         condition: service_healthy
 
+  lab:
+    build: .
+    container_name: vee-lab
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8010:8010"
+    volumes:
+      - ./lab/data:/app/lab/data
+    command: ["uvicorn", "lab.app:app", "--host", "0.0.0.0", "--port", "8010"]
+
 volumes:
   memory_postgres_data:
