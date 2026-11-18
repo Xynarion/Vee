@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Tuple
 
 from pydantic import ValidationError
 
@@ -32,24 +32,42 @@ def strip_json_fences(text: str) -> str:
     return raw
 
 
+def extract_json_text(text: str) -> str:
+    stripped = strip_json_fences(text)
+    if not stripped:
+        return ""
+    start, end = stripped.find("{"), stripped.rfind("}")
+    if start == -1 or end <= start:
+        return stripped
+    return stripped[start : end + 1]
+
+
+def parse_json_object(raw_text: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    blob = extract_json_text(raw_text)
+    if not blob:
+        return None, "empty model output"
+    try:
+        data = json.loads(blob)
+    except json.JSONDecodeError as exc:
+        return None, f"invalid JSON: {exc}"
+    if not isinstance(data, dict):
+        return None, "JSON root must be an object"
+    return data, None
+
+
 def parse_and_validate(raw_text: str) -> Decision:
     """
-    Strip fences, json.loads, Pydantic + invariants.
+    Strip fences, extract JSON object, json.loads, Pydantic + invariants.
 
     Raises DecisionValidationError on any failure.
     """
+    # 1. Parse. Strip fences, take the JSON object, and load it.
+    data, error = parse_json_object(raw_text)
+    if error or data is None:
+        raise DecisionValidationError(error or "empty model output")
     try:
-        stripped = strip_json_fences(raw_text)
-        if not stripped:
-            raise DecisionValidationError("empty model output")
-        data: Dict[str, Any] = json.loads(stripped)
-        if not isinstance(data, dict):
-            raise DecisionValidationError("JSON root must be an object")
+        # 2. Validate. The object must match the Decision contract.
         return Decision.model_validate(data)
-    except DecisionValidationError:
-        raise
-    except json.JSONDecodeError as exc:
-        raise DecisionValidationError(f"invalid JSON: {exc}") from exc
     except ValidationError as exc:
         raise DecisionValidationError(str(exc)) from exc
     except Exception as exc:  # noqa: BLE001 — contract boundary

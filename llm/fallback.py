@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from llm.schema import (
     Decision,
-    Intent,
-    ResponsePlan,
-    Scope,
-    RecallPlan,
-    WritePlan,
+    Evidence,
+    Judge,
+    JudgeDecision,
+    Plan,
+    Say,
+    Understanding,
 )
 
 FALLBACK_RESPONSE_TEXT = (
@@ -20,26 +21,24 @@ def safe_fallback(reason: str) -> Decision:
     """Return a clarification Decision. `reason` is for logs only."""
     _ = reason  # caller logs; keep payload stable
     return Decision(
-        intent=Intent(
-            kind="irrelevant",
-            summary="Could not validate model output.",
+        judge=Judge(
+            understanding=Understanding(
+                continuity=None,
+                message_meaning_summary="Could not validate model output.",
+                responsibilities=[],
+                responsibilities_reason=(
+                    "Output could not be accepted; this turn requires neither "
+                    "witnessing nor testifying."
+                ),
+                requested_period=None,
+            ),
+            evidence=Evidence(),
+            decision=JudgeDecision(),
         ),
-        write=WritePlan(
-            target_ids=[],
-            missing=[],
-            conflicts=[],
-            duplicate_ids=[],
-        ),
-        recall=RecallPlan(
-            intention=None,
-            shape=None,
-            order=None,
-            scope=Scope(start=None, end=None),
-        ),
-        tool_calls=[],
-        response=ResponsePlan(
-            type="clarification",
+        plan=Plan(tool_calls=[]),
+        say=Say(
+            types=["clarification"],
             text=FALLBACK_RESPONSE_TEXT,
-            show_ids=[],
+            testimony=None,
         ),
     )
