@@ -1,0 +1,1134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>VEE / DECISION LAB</title>
+<style>
+  :root {
+    --bg: #050814; --panel: #0b1220; --line: #1c2a44; --cyan: #3ee0ff;
+    --blue: #4d7cff; --purple: #8b7cff; --green: #3dff9c; --red: #ff5d73;
+    --amber: #ffc14d; --text: #d7e4ff; --muted: #7f8dab;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 13px/1.45 ui-sans-serif, system-ui, sans-serif; }
+  body {
+    min-height: 100vh;
+    background-image:
+      linear-gradient(rgba(28,42,68,.35) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(28,42,68,.35) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  code, pre, .mono, table, input, select, button, textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  header {
+    display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center;
+    padding: 16px 22px; border-bottom: 1px solid var(--line);
+    background: rgba(5,8,20,.92); position: sticky; top: 0; z-index: 4;
+  }
+  .brand { letter-spacing: .18em; font-size: 13px; color: var(--cyan); }
+  .meta { color: var(--muted); display: flex; gap: 16px; flex-wrap: wrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--amber); }
+  .dot.on { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .dot.run { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+  main { padding: 18px 22px 48px; display: grid; gap: 16px; }
+  .row { display: grid; gap: 16px; }
+  .controls, .metrics, .panel, .score-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    box-shadow: 0 0 0 1px rgba(62,224,255,.04), 0 0 24px rgba(77,124,255,.05);
+  }
+  .controls {
+    padding: 14px 16px 16px; display: grid; gap: 10px; position: relative;
+  }
+  .controls::before, .controls::after {
+    content: ""; position: absolute; width: 10px; height: 10px; opacity: .7;
+  }
+  .controls::before { top: 8px; left: 9px; border-top: 1px solid var(--cyan); border-left: 1px solid var(--cyan); }
+  .controls::after { right: 9px; bottom: 8px; border-right: 1px solid var(--cyan); border-bottom: 1px solid var(--cyan); }
+  .control-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 10px 12px; align-items: end;
+  }
+  .field { display: grid; gap: 6px; color: var(--cyan); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; }
+  .field.wide { grid-column: span 2; min-width: 180px; }
+  .field input, .field select {
+    width: 100%; background:
+      repeating-linear-gradient(0deg, transparent 0 2px, rgba(0,0,0,.22) 2px 3px),
+      #050814;
+    color: var(--text); border: 1px solid rgba(62,224,255,.38); border-radius: 0;
+    clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
+    padding: 8px 10px; letter-spacing: .08em; outline: none;
+    box-shadow: inset 0 0 12px rgba(62,224,255,.12);
+    appearance: none; -webkit-appearance: none;
+  }
+  .field input[type=number] { -moz-appearance: textfield; }
+  .field input[type=number]::-webkit-outer-spin-button,
+  .field input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .field select { padding-right: 22px; cursor: pointer; }
+  .field.select { position: relative; }
+  .field.select::after {
+    content: "▾"; position: absolute; right: 10px; bottom: 8px;
+    color: var(--cyan); pointer-events: none; font-size: 11px;
+  }
+  .field input:hover, .field select:hover { border-color: rgba(62,224,255,.7); }
+  .field input:focus, .field select:focus {
+    border-color: var(--cyan); color: var(--cyan);
+    box-shadow: inset 0 0 14px rgba(62,224,255,.22), 0 0 14px rgba(62,224,255,.25);
+  }
+  .toggle {
+    display: flex; align-items: center; gap: 10px; min-height: 38px; cursor: pointer;
+    color: var(--muted); font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .switch {
+    width: 36px; height: 16px; flex: 0 0 36px; position: relative;
+    border: 1px solid rgba(62,224,255,.4); background: #050814;
+    clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px);
+    box-shadow: inset 0 0 8px rgba(62,224,255,.15);
+  }
+  .switch::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px;
+    background: var(--muted);
+    clip-path: polygon(2px 0, 100% 0, 100% calc(100% - 2px), calc(100% - 2px) 100%, 0 100%, 0 2px);
+    transition: left .18s ease, background .18s ease, box-shadow .18s ease;
+  }
+  .toggle input:checked + .switch {
+    border-color: var(--cyan);
+    box-shadow: inset 0 0 10px rgba(62,224,255,.35), 0 0 10px rgba(62,224,255,.2);
+  }
+  .toggle input:checked + .switch::after {
+    left: 22px; background: var(--cyan); box-shadow: 0 0 8px var(--cyan);
+  }
+  .toggle input:checked ~ span.lbl, .toggle input:checked + .switch + .lbl { color: var(--cyan); }
+  .toggle:has(input:checked) { color: var(--cyan); }
+  .toggle-row { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; }
+  .toggle input:focus-visible + .switch { box-shadow: 0 0 0 1px var(--cyan), 0 0 10px rgba(62,224,255,.3); }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  button {
+    background: #070b16; color: var(--cyan); border: 1px solid rgba(62,224,255,.45);
+    border-radius: 0; padding: 8px 12px; cursor: pointer; letter-spacing: .1em;
+    clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
+  }
+  button:hover { background: #10203c; box-shadow: 0 0 12px rgba(62,224,255,.18); }
+  button.primary {
+    background: linear-gradient(90deg, #1a4d88, var(--cyan));
+    color: #041018; font-weight: 700; border-color: var(--cyan);
+    box-shadow: 0 0 16px rgba(62,224,255,.32);
+  }
+  button.primary:hover { filter: brightness(1.08); }
+  button:disabled { opacity: .35; cursor: not-allowed; box-shadow: none; }
+  .metrics-stack { display: grid; gap: 12px; }
+  .row-block { display: grid; gap: 6px; }
+  .row-caption {
+    color: var(--muted); font-size: 10px; letter-spacing: .22em;
+    padding: 0 2px; text-transform: uppercase;
+  }
+  .row-caption.split-cap {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  }
+  .scenario-chip {
+    color: var(--cyan); letter-spacing: .16em; font-size: 10px; text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(62,224,255,.35); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .params { display: grid; gap: 10px; }
+  .params-toggle {
+    list-style: none; display: flex; align-items: center; gap: 10px;
+    cursor: pointer; user-select: none; color: var(--muted);
+    padding: 4px 2px;
+  }
+  .params-toggle::-webkit-details-marker { display: none; }
+  .params-toggle::before {
+    content: "▸"; color: var(--cyan); font-size: 11px; line-height: 1;
+    text-shadow: 0 0 8px rgba(62,224,255,.5);
+  }
+  .params[open] .params-toggle::before { content: "▾"; }
+  .params-toggle:hover { color: var(--cyan); }
+  .params-preview {
+    margin-left: auto; color: var(--muted); letter-spacing: .1em;
+    font-size: 10px; text-transform: uppercase; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  }
+  .params[open] .params-preview { display: none; }
+  .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .metrics.ops { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .metric { padding: 12px 14px; border-right: 1px solid var(--line); }
+  .metric:last-child { border-right: 0; }
+  .metric b { display: block; font-size: 20px; color: var(--cyan); }
+  .metric span { color: var(--muted); font-size: 11px; letter-spacing: .06em; }
+  .contract-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .score-card { padding: 14px 16px 12px; position: relative; overflow: hidden; }
+  .score-card::before, .score-card::after {
+    content: ""; position: absolute; width: 9px; height: 9px; opacity: .7;
+  }
+  .score-card::before { top: 7px; left: 8px; border-top: 1px solid var(--cyan); border-left: 1px solid var(--cyan); }
+  .score-card::after { right: 8px; bottom: 7px; border-right: 1px solid var(--cyan); border-bottom: 1px solid var(--cyan); }
+  .period-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 12px 14px 16px; }
+  .period-col { display: grid; gap: 8px; min-width: 0; }
+  .period-row {
+    display: grid; grid-template-columns: minmax(0, 1fr) 52px 48px; gap: 8px;
+    align-items: center; font-size: 12px;
+  }
+  .period-row .period-dates { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .period-row .period-count { color: var(--cyan); text-align: right; }
+  .period-row .period-pct { color: var(--muted); text-align: right; }
+  .period-bar { height: 4px; background: #050814; border: 1px solid var(--line); }
+  .period-bar > i { display: block; height: 100%; background: var(--cyan); max-width: 100%; }
+  .period-empty { color: var(--muted); padding: 8px 0; }
+  @media (max-width: 900px) { .period-grid { grid-template-columns: 1fr; } }
+  .score-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .score-label { color: var(--cyan); letter-spacing: .22em; font-size: 11px; text-transform: uppercase; }
+  .score-val { font-size: 22px; color: var(--text); text-shadow: 0 0 12px rgba(62,224,255,.28); }
+  .hud-track {
+    position: relative; height: 16px; margin-top: 10px;
+    background:
+      repeating-linear-gradient(90deg, rgba(62,224,255,.08) 0 1px, transparent 1px 8px),
+      #050814;
+    border: 1px solid rgba(62,224,255,.38);
+    clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
+    overflow: hidden;
+    box-shadow: inset 0 0 14px rgba(62,224,255,.14);
+  }
+  .hud-fill {
+    display: block; height: 100%; width: 0;
+    background: linear-gradient(90deg, #163a88, var(--blue) 40%, var(--cyan) 88%, #e7ffff);
+    box-shadow: 0 0 16px rgba(62,224,255,.7);
+    transition: width .45s ease;
+  }
+  .hud-track.high .hud-fill {
+    background: linear-gradient(90deg, #0a5a40, var(--green) 45%, #c8ffe8);
+    box-shadow: 0 0 16px rgba(61,255,156,.55);
+  }
+  .hud-track.mid .hud-fill {
+    background: linear-gradient(90deg, #7a4a00, var(--amber) 45%, #ffe9b0);
+    box-shadow: 0 0 16px rgba(255,193,77,.5);
+  }
+  .hud-track.low .hud-fill {
+    background: linear-gradient(90deg, #6a1020, var(--red) 45%, #ffc0c8);
+    box-shadow: 0 0 16px rgba(255,93,115,.5);
+  }
+  .hud-scan {
+    position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, transparent 0 2px, rgba(0,0,0,.28) 2px 3px);
+  }
+  .hud-scale {
+    display: flex; justify-content: space-between;
+    color: var(--muted); font-size: 9px; letter-spacing: .14em; margin-top: 5px;
+  }
+  .progress.hud { padding: 14px 16px 16px; }
+  .progress-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .progress-readout {
+    color: var(--cyan); font-size: 18px; letter-spacing: .18em;
+    text-shadow: 0 0 12px rgba(62,224,255,.55);
+  }
+  .reactor-track {
+    position: relative; height: 18px; margin-top: 10px; background: #050814;
+    border: 1px solid rgba(62,224,255,.42);
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+    overflow: hidden;
+    box-shadow: inset 0 0 18px rgba(62,224,255,.16), 0 0 22px rgba(62,224,255,.08);
+  }
+  .reactor-fill {
+    display: block; height: 100%; width: 0;
+    background: linear-gradient(90deg, rgba(77,124,255,.25), var(--blue) 38%, var(--cyan) 82%, #fff);
+    box-shadow: 0 0 22px rgba(62,224,255,.8);
+    transition: width .4s ease;
+  }
+  .reactor-grid {
+    position: absolute; inset: 0; pointer-events: none;
+    background:
+      repeating-linear-gradient(90deg, rgba(62,224,255,.2) 0 1px, transparent 1px 12px),
+      repeating-linear-gradient(0deg, transparent 0 2px, rgba(0,0,0,.32) 2px 3px);
+  }
+  .reactor-scan { display: none; }
+  .progress.hud.live .reactor-scan {
+    display: block; position: absolute; top: 0; bottom: 0; width: 26%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+    animation: sweep 1.4s linear infinite;
+  }
+  @keyframes sweep {
+    from { transform: translateX(-130%); }
+    to { transform: translateX(480%); }
+  }
+  @media (max-width: 860px) {
+    .metrics, .metrics.ops, .contract-row { grid-template-columns: 1fr; }
+    .metric { border-right: 0; border-bottom: 1px solid var(--line); }
+    .metric:last-child { border-bottom: 0; }
+  }
+  .split {
+    display: grid; gap: 16px; align-items: stretch;
+    grid-template-columns: 1.05fr .95fr;
+    grid-template-areas:
+      "context history"
+      "inspector inspector";
+  }
+  .scenario-hud { grid-area: context; }
+  .history-panel { grid-area: history; min-width: 0; }
+  .inspector-panel { grid-area: inspector; }
+  .split .scenario-grid { grid-template-columns: 1fr; }
+  @media (max-width: 980px) {
+    .split {
+      grid-template-columns: 1fr;
+      grid-template-areas: "context" "history" "inspector";
+    }
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+  tr { cursor: pointer; }
+  tr.active { background: rgba(62,224,255,.08); }
+  .pass { color: var(--green); } .close { color: var(--amber); } .fail { color: var(--red); }
+  .cause { letter-spacing: .08em; font-size: 11px; text-transform: uppercase; }
+  .cause.connection, .cause.timeout, .cause.close { color: var(--amber); }
+  .cause.scoring, .cause.schema, .cause.invalid_json { color: var(--red); }
+  .cause.truncated, .cause.empty { color: var(--purple); }
+  .cause.pass { color: var(--muted); }
+  .tabs { display: flex; gap: 6px; padding: 10px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .tabs button {
+    padding: 5px 9px; letter-spacing: .08em; text-transform: uppercase; font-size: 11px;
+    clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
+  }
+  .tabs button.on { background: var(--cyan); color: #041018; }
+  .body { padding: 12px; max-height: 420px; overflow: auto; }
+  pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+  .k { color: #9cdcfe; } .s { color: #ce9178; }
+  .chk { display: grid; grid-template-columns: 14px 1fr; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .chk i { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; }
+  .stream { min-height: 120px; color: #9fb2d6; }
+  .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; padding: 12px; }
+  svg.chart { width: 100%; height: 88px; background: #070b16; border-radius: 6px; }
+  .notes { color: var(--muted); font-size: 12px; padding: 0 4px; }
+  .scenario-hud { padding-bottom: 12px; }
+  .scenario-grid {
+    display: grid; grid-template-columns: 1.2fr .8fr; gap: 10px; padding: 4px 12px 2px;
+  }
+  .scenario-cell {
+    background: #050814; border: 1px solid rgba(62,224,255,.3); padding: 10px 12px;
+    clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
+    box-shadow: inset 0 0 14px rgba(62,224,255,.1);
+    min-width: 0;
+  }
+  .scenario-cell .score-label { display: block; margin-bottom: 6px; }
+  .scenario-cell pre { color: var(--text); font-size: 12px; line-height: 1.5; }
+  .scenario-cell.memory pre { max-height: 160px; overflow: auto; }
+  .scenario-cell textarea {
+    width: 100%; min-height: 64px; resize: vertical;
+    background: #02070b; color: var(--text);
+    border: 1px solid rgba(62,224,255,.45); border-radius: 0;
+    padding: 8px 10px; font-size: 12px; line-height: 1.5;
+    outline: none; box-shadow: inset 0 0 12px rgba(62,224,255,.12);
+  }
+  .scenario-cell textarea:focus {
+    border-color: var(--cyan); color: var(--cyan);
+    box-shadow: inset 0 0 14px rgba(62,224,255,.22), 0 0 14px rgba(62,224,255,.25);
+  }
+  .scenario-cell .edit-hint { margin-top: 6px; padding: 0; }
+  .term {
+    background: #02070b;
+    border: 1px solid rgba(61,255,156,.28);
+    box-shadow: inset 0 0 22px rgba(61,255,156,.08);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+  }
+  .term-chrome {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 8px; border-bottom: 1px solid rgba(61,255,156,.22);
+    color: #3dff9c; font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+  }
+  .term-chrome span:last-child { color: #7f8dab; }
+  .term-scroll {
+    max-height: 280px; overflow-y: auto; padding: 8px 10px 10px;
+    background-image: repeating-linear-gradient(
+      0deg, transparent 0 2px, rgba(61,255,156,.03) 2px 3px
+    );
+  }
+  .term-scroll::-webkit-scrollbar { width: 8px; }
+  .term-scroll::-webkit-scrollbar-thumb { background: rgba(61,255,156,.35); }
+  .term-idle { color: #4d6a5c; padding: 10px 0; }
+  .term-turn { margin: 0 0 18px; padding-bottom: 4px; }
+  .term-turn:last-child { margin-bottom: 0; padding-bottom: 0; }
+  .term-q {
+    color: #3dff9c; letter-spacing: .14em; font-size: 10px; margin-bottom: 6px;
+  }
+  .term-row {
+    display: grid; grid-template-columns: 88px 1fr; gap: 8px;
+    align-items: start; margin: 0 0 4px;
+  }
+  .term-row .prompt { color: #3ee0ff; white-space: nowrap; }
+  .term-row.vee .prompt { color: #c9a0ff; }
+  .term-row .blob { color: #d7e4ff; white-space: pre-wrap; word-break: break-word; line-height: 1.45; }
+  @media (max-width: 860px) { .scenario-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">VEE / DECISION LAB</div>
+  <div class="meta">
+    <span>Model: <b id="model">Qwen3.5-9B</b></span>
+    <span>Experiment: <b id="scenario">Brain-dump / Scenario 01</b></span>
+    <span><i id="connDot" class="dot"></i> <span id="conn">offline</span></span>
+    <span id="expStatus">idle</span>
+  </div>
+</header>
+<main>
+  <section class="controls">
+    <details class="params" id="params" open>
+      <summary class="row-caption params-toggle">Parameters <span class="params-preview" id="paramsPreview"></span></summary>
+      <div class="control-grid">
+        <label class="field">Requests <input id="runs" type="number" min="1" max="100" value="10"></label>
+        <label class="field">Temperature <input id="temp" type="number" step="0.1" min="0" max="2" value="0"></label>
+        <label class="field">Timeout s <input id="timeout" type="number" min="5" value="90"></label>
+        <label class="field">Input $/M <input id="inRate" type="number" step="0.01" value="0.17"></label>
+        <label class="field">Output $/M <input id="outRate" type="number" step="0.01" value="0.25"></label>
+        <label class="field select wide">Scenario
+          <select id="scenarioSelect"></select>
+        </label>
+        <label class="field select wide">JSON mode
+          <select id="jsonMode">
+            <option value="json_object">json_object</option>
+            <option value="json_schema">json_schema (optional)</option>
+          </select>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <label class="toggle"><input id="reasoning" type="checkbox"><span class="switch"></span> Reasoning</label>
+        <label class="toggle"><input id="mock" type="checkbox" checked><span class="switch"></span> Mock inference</label>
+      </div>
+    </details>
+    <div class="row-caption">Actions</div>
+    <div class="actions">
+      <button class="primary" id="runBtn" onclick="run(false)">Run Experiment</button>
+      <button id="stopBtn" onclick="stop()" disabled>Stop</button>
+      <button id="againBtn" onclick="run(true)">Run Again</button>
+      <button onclick="resetView()">Reset Results</button>
+      <button onclick="exportFile('json')">Export JSON</button>
+      <button onclick="exportFile('csv')">Export CSV</button>
+    </div>
+  </section>
+  <section class="metrics-stack">
+    <div class="row-block">
+      <div class="row-caption">Gates</div>
+      <div class="metrics" id="metricsGates"></div>
+    </div>
+    <div class="row-block">
+      <div class="row-caption">Judge / Plan / Say</div>
+      <div class="contract-row" id="metricsContract"></div>
+    </div>
+    <div class="row-block">
+      <div class="row-caption split-cap">Telemetry <span class="scenario-chip" id="telemetryScenario">—</span></div>
+      <div class="metrics ops" id="metricsOps"></div>
+    </div>
+  </section>
+  <section class="panel">
+    <div class="tabs" id="periodTabs">
+      <b style="padding:8px 10px;color:var(--muted)">PERIOD DEBUG</b>
+      <button class="on" data-period-src="experiment">This experiment</button>
+      <button data-period-src="scenario">This scenario</button>
+      <span class="notes" id="periodNote" style="margin-left:auto;padding:8px 10px"></span>
+    </div>
+    <div class="period-grid" id="periodStats"></div>
+  </section>
+  <section class="panel progress hud" id="progressPanel">
+    <div class="progress-meta">
+      <div id="progressLabel">No experiment</div>
+      <div class="scenario-chip" id="progressScenario">—</div>
+      <div class="progress-readout" id="progressPct">00%</div>
+    </div>
+    <div class="reactor-track">
+      <i id="bar" class="reactor-fill"></i>
+      <span class="reactor-grid"></span>
+      <span class="reactor-scan"></span>
+    </div>
+  </section>
+  <section class="split">
+    <div class="panel scenario-hud">
+      <div class="tabs"><b style="padding:8px 10px;color:var(--muted)">SCENARIO CONTEXT</b></div>
+      <div class="scenario-grid" id="scenarioContext"></div>
+    </div>
+    <div class="panel history-panel">
+      <div class="tabs"><b style="padding:8px 10px;color:var(--muted)">REQUEST HISTORY</b></div>
+      <div class="body" style="max-height:280px">
+        <table>
+          <thead><tr><th>Request</th><th>Status</th><th>Cause</th><th>Accuracy</th><th>Latency</th><th>Tokens</th><th>Cost</th></tr></thead>
+          <tbody id="runsBody"></tbody>
+        </table>
+      </div>
+      <div class="charts" id="charts"></div>
+    </div>
+    <div class="panel inspector-panel">
+      <div class="tabs" id="tabs">
+        <button class="on" data-tab="judge">JUDGE</button>
+        <button data-tab="plan">PLAN</button>
+        <button data-tab="say">SAY</button>
+        <button data-tab="raw">RAW JSON</button>
+        <button data-tab="eval">EVALUATION</button>
+      </div>
+      <div class="body" id="inspector"><div class="notes">Select a request.</div></div>
+    </div>
+  </section>
+  <section class="panel">
+    <div class="tabs"><b style="padding:8px 10px;color:var(--muted)">LIVE STREAM</b> <span class="notes" id="streamNote">idle — incomplete JSON is not scored</span></div>
+    <pre class="body stream" id="stream"></pre>
+  </section>
+  <p class="notes" id="notes"></p>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let meta = null, experiment = null, selected = null, tab = "judge", es = null, streamBuf = "";
+let periodSrc = "experiment", scenarioPeriodStats = null, scenarioPeriodId = null;
+
+const gateKeys = [
+  ["strict_pass_rate", "Strict Pass"],
+  ["weighted_accuracy", "Weighted Acc"],
+  ["json_validity", "JSON Valid"],
+  ["schema_validity", "Schema Valid"],
+];
+const contractKeys = [
+  ["judgement", "Judge"],
+  ["plan_f1", "Plan"],
+  ["say", "Say"],
+];
+const opsKeys = [
+  ["p50_latency_s", "P50 latency"],
+  ["avg_tokens_per_sec", "Avg tok/s"],
+  ["total_cost_usd", "Est. cost"],
+];
+
+function isPct(key) {
+  return String(key).includes("rate")
+    || ["weighted_accuracy", "json_validity", "schema_validity", "judgement", "plan_f1", "say"].includes(key);
+}
+
+function fmt(v, key) {
+  if (isPct(key) && (v == null || v === "")) return "0%";
+  if (v == null || v === "") return "—";
+  if (key && key.includes("cost")) return "$" + Number(v).toFixed(6);
+  if (key && key.includes("latency")) return Number(v).toFixed(2) + "s";
+  if (typeof v === "number") return (v % 1 ? v.toFixed(1) : v) + (isPct(key) ? "%" : "");
+  return v;
+}
+
+function failKind(run) {
+  const ev = run.evaluation || {};
+  if (ev.fail_kind) return ev.fail_kind;
+  if ((run.status || "").toUpperCase() === "PASS" || (ev.gates || {}).strict_pass) return "pass";
+  const err = String(run.error || ev.json_error || "").toLowerCase();
+  if (/timeout|timed out|exceeded/.test(err)) return "timeout";
+  if (/connection|connecterror|network|dns|name or service/.test(err)) return "connection";
+  if (/truncated|finish_reason=/.test(err)) return "truncated";
+  if (!(run.raw_response || "").trim()) return "empty";
+  if (ev.gates && ev.gates.json_valid === false) return "invalid_json";
+  if (ev.gates && ev.gates.schema_valid === false) return "schema";
+  return "scoring";
+}
+
+function failLabel(kind) {
+  return {
+    pass: "—",
+    connection: "connection",
+    timeout: "timeout",
+    empty: "empty",
+    invalid_json: "bad json",
+    schema: "schema",
+    truncated: "truncated",
+    scoring: "scoring",
+    close: "close",
+  }[kind] || kind || "—";
+}
+
+function color(status) {
+  return {pass:"var(--green)", fail:"var(--red)", variant:"var(--cyan)", amber:"var(--amber)"}[status] || "var(--muted)";
+}
+
+const SCENARIO_FIELDS = [
+  "Current message",
+  "Recent conversation",
+  "Progress Memory",
+  "Current date and time",
+  "This calendar week (current week)",
+  "Last calendar week (previous week)",
+];
+
+function unwrapMessage(value) {
+  const t = String(value || "").trim();
+  const m = t.match(/^"([\s\S]*)"$/);
+  return m ? m[1] : t;
+}
+
+function currentMessageInput() {
+  const el = $("currentMessage");
+  return el ? el.value : "";
+}
+
+function parseConversation(value) {
+  const raw = String(value || "").trim();
+  if (!raw || raw === "(none)") return [];
+  const utterances = [];
+  for (const line of raw.split(/\n/)) {
+    const m = line.match(/^(Founder|Vee)\s*:\s*(.*)$/i);
+    if (m) {
+      utterances.push({ who: m[1].toLowerCase() === "vee" ? "vee" : "founder", text: m[2] });
+    } else if (utterances.length && line.trim()) {
+      utterances[utterances.length - 1].text += (utterances[utterances.length - 1].text ? " " : "") + line.trim();
+    }
+  }
+  const turns = [];
+  for (const u of utterances) {
+    if (!turns.length || u.who === "founder") turns.push({ lines: [u] });
+    else turns[turns.length - 1].lines.push(u);
+  }
+  return turns;
+}
+
+function renderConversation(value) {
+  const turns = parseConversation(value);
+  const body = turns.length
+    ? turns.map((t) => {
+        const rows = t.lines.map((u) => {
+          const prompt = u.who === "vee" ? "> vee" : "% founder";
+          return `<div class="term-row ${u.who}"><span class="prompt">${prompt}</span><span class="blob">${esc(u.text)}</span></div>`;
+        }).join("");
+        return `<div class="term-turn"><div class="term-q">?</div>${rows}</div>`;
+      }).join("")
+    : `<div class="term-idle">? idle — no recent turns</div>`;
+  return `<div class="term"><div class="term-chrome"><span>tty / recent</span><span>${turns.length ? "live" : "empty"}</span></div><div class="term-scroll">${body}</div></div>`;
+}
+
+function renderScenario(text) {
+  const src = String(text || "");
+  const parts = [];
+  for (let i = 0; i < SCENARIO_FIELDS.length; i++) {
+    const name = SCENARIO_FIELDS[i];
+    const next = SCENARIO_FIELDS[i + 1];
+    const start = src.indexOf(name + ":");
+    if (start === -1) continue;
+    const from = start + name.length + 1;
+    const end = next ? src.indexOf(next + ":", from) : src.length;
+    const value = src.slice(from, end < 0 ? src.length : end).trim();
+    parts.push({ name, value });
+  }
+  const el = $("scenarioContext");
+  if (!parts.length) {
+    el.innerHTML = `<div class="scenario-cell"><pre>${esc(src) || "No scenario loaded."}</pre></div>`;
+    return;
+  }
+  el.innerHTML = parts.map((p) => {
+    const extra = p.name === "Progress Memory" ? " memory" : "";
+    let body;
+    if (p.name === "Current message") {
+      body = `<textarea id="currentMessage" rows="3" spellcheck="false">${esc(unwrapMessage(p.value))}</textarea>
+        <div class="notes edit-hint">Editable. Run Experiment sends this as the current message. Plate, recent turns, and clock stay with the scenario.</div>`;
+    } else if (p.name === "Recent conversation") {
+      body = renderConversation(p.value);
+    } else {
+      body = `<pre>${esc(p.value)}</pre>`;
+    }
+    return `<div class="scenario-cell${extra}"><span class="score-label">${esc(p.name)}</span>${body}</div>`;
+  }).join("");
+  startTermAutoScroll(el.querySelector(".term-scroll"));
+}
+
+let termScrollTimer = 0;
+
+function startTermAutoScroll(el) {
+  clearInterval(termScrollTimer);
+  termScrollTimer = 0;
+  if (!el) return;
+  const overflow = () => Math.max(0, el.scrollHeight - el.clientHeight);
+  let dir = 1;
+  let holdUntil = 0;
+  let last = performance.now();
+  const speed = 24;
+  const pause = 900;
+  el.scrollTop = 0;
+  termScrollTimer = setInterval(() => {
+    if (!el.isConnected) {
+      clearInterval(termScrollTimer);
+      termScrollTimer = 0;
+      return;
+    }
+    const now = performance.now();
+    const dt = Math.min(0.12, (now - last) / 1000);
+    last = now;
+    const limit = overflow();
+    if (limit <= 1 || now < holdUntil) return;
+    el.scrollTop += dir * speed * dt;
+    if (dir > 0 && el.scrollTop >= limit - 0.5) {
+      el.scrollTop = limit;
+      dir = -1;
+      holdUntil = now + pause;
+    } else if (dir < 0 && el.scrollTop <= 0.5) {
+      el.scrollTop = 0;
+      dir = 1;
+      holdUntil = now + pause;
+    }
+  }, 50);
+}
+
+function metricCells(keys, m) {
+  return keys.map(([k,l]) => `<div class="metric"><span>${l}</span><b>${fmt(m[k], k)}</b></div>`).join("");
+}
+
+function tone(v) {
+  if (v == null || v === "") return "idle";
+  if (v >= 90) return "high";
+  if (v >= 70) return "mid";
+  return "low";
+}
+
+function contractCards(m) {
+  return contractKeys.map(([k,l]) => {
+    const v = m[k];
+    const pct = typeof v === "number" ? Math.max(0, Math.min(100, v)) : 0;
+    return `<div class="score-card">
+      <div class="score-head"><span class="score-label">${l}</span><b class="score-val">${fmt(v, k)}</b></div>
+      <div class="hud-track ${tone(v)}"><i class="hud-fill" style="width:${pct}%"></i><span class="hud-scan"></span></div>
+      <div class="hud-scale"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+    </div>`;
+  }).join("");
+}
+
+async function boot() {
+  meta = await (await fetch("/api/meta")).json();
+  $("model").textContent = (meta.model || "").replace("Qwen/", "");
+  $("scenario").textContent = meta.scenario;
+  $("notes").textContent = (meta.notes || []).join(" ");
+  fillScenarios(meta);
+  renderScenario(selectedFixture());
+  $("mock").checked = meta.mock_default;
+  if (meta.defaults) {
+    $("runs").value = meta.defaults.runs;
+    $("temp").value = meta.defaults.temperature;
+    $("timeout").value = meta.defaults.timeout_s;
+    $("inRate").value = meta.defaults.input_rate;
+    $("outRate").value = meta.defaults.output_rate;
+  }
+  bindParams();
+  const saved = localStorage.getItem("vee-lab-id");
+  let current = meta.current;
+  if (saved && (!current || current.id !== saved)) {
+    const extra = await fetch("/api/experiments/" + saved).then(r => r.ok ? r.json() : null);
+    if (extra && extra.status === "running") current = extra;
+  }
+  if (current && current.id) {
+    experiment = current;
+    localStorage.setItem("vee-lab-id", current.id);
+    const sid = current.settings && current.settings.scenario;
+    if (sid && [...$("scenarioSelect").options].some(o => o.value === sid)) {
+      $("scenarioSelect").value = sid;
+    }
+    $("scenarioSelect").onchange();
+    const override = current.settings && current.settings.message;
+    if (override && $("currentMessage")) $("currentMessage").value = override;
+    render();
+    if (current.status === "running") connect(current.id);
+    else setConn(true, current.status);
+  } else {
+    render();
+    setConn(true, "idle");
+  }
+}
+
+function setConn(ok, status) {
+  $("conn").textContent = ok ? "connected" : "offline";
+  $("connDot").className = "dot" + (status === "running" ? " run" : ok ? " on" : "");
+  $("expStatus").textContent = status || "idle";
+}
+
+function updateParamsPreview() {
+  const mock = $("mock").checked ? "MOCK" : "LIVE";
+  const reason = $("reasoning").checked ? " · REASON" : "";
+  $("paramsPreview").textContent =
+    `${$("runs").value} REQ · T ${$("temp").value} · ${$("timeout").value}S · ${mock}${reason}`;
+}
+
+function bindParams() {
+  const el = $("params");
+  if (localStorage.getItem("vee-lab-params-open") === "0") el.removeAttribute("open");
+  else el.setAttribute("open", "");
+  el.addEventListener("toggle", () => {
+    localStorage.setItem("vee-lab-params-open", el.open ? "1" : "0");
+  });
+  el.addEventListener("input", updateParamsPreview);
+  el.addEventListener("change", updateParamsPreview);
+  updateParamsPreview();
+}
+
+function fillScenarios(meta) {
+  const sel = $("scenarioSelect");
+  const rows = meta.scenarios || [];
+  const ids = new Set(rows.map(s => s.id));
+  const preferred = (meta.current && meta.current.settings && meta.current.settings.scenario)
+    || (meta.defaults && meta.defaults.scenario)
+    || (rows[0] && rows[0].id);
+  const current = ids.has(preferred)
+    ? preferred
+    : ((meta.defaults && ids.has(meta.defaults.scenario) && meta.defaults.scenario) || (rows[0] && rows[0].id));
+  const labels = {"brain-dump": "Brain-dump", "remembering": "Remembering"};
+  const groups = [];
+  const byFamily = {};
+  for (const s of rows) {
+    const fam = s.family || "other";
+    if (!byFamily[fam]) {
+      byFamily[fam] = [];
+      groups.push(fam);
+    }
+    byFamily[fam].push(s);
+  }
+  sel.innerHTML = groups.map(fam => {
+    const opts = byFamily[fam].map(s => `<option value="${esc(s.id)}">${esc(s.title)}</option>`).join("");
+    return `<optgroup label="${esc(labels[fam] || fam)}">${opts}</optgroup>`;
+  }).join("");
+  if (current) sel.value = current;
+  sel.onchange = () => {
+    const row = rows.find(s => s.id === sel.value);
+    $("scenario").textContent = row ? row.title : sel.value;
+    renderScenario(row ? row.fixture : "");
+    syncScenarioChips();
+    scenarioPeriodStats = null;
+    scenarioPeriodId = null;
+    renderPeriodStats();
+  };
+  sel.onchange();
+}
+
+function activeScenarioTitle() {
+  const sid = (experiment && experiment.settings && experiment.settings.scenario) || ($("scenarioSelect") && $("scenarioSelect").value);
+  const row = ((meta && meta.scenarios) || []).find(s => s.id === sid);
+  return (row && row.title) || sid || "—";
+}
+
+function syncScenarioChips() {
+  const title = activeScenarioTitle();
+  const tel = $("telemetryScenario");
+  const prog = $("progressScenario");
+  if (tel) tel.textContent = title;
+  if (prog) prog.textContent = title;
+}
+
+function selectedFixture() {
+  const rows = (meta && meta.scenarios) || [];
+  const row = rows.find(s => s.id === $("scenarioSelect").value);
+  return (row && row.fixture) || (meta && meta.fixture) || "";
+}
+
+function settings() {
+  return {
+    runs: Number($("runs").value),
+    temperature: Number($("temp").value),
+    timeout_s: Number($("timeout").value),
+    input_rate: Number($("inRate").value),
+    output_rate: Number($("outRate").value),
+    json_mode: $("jsonMode").value,
+    reasoning: $("reasoning").checked,
+    mock: $("mock").checked,
+    scenario: $("scenarioSelect").value,
+    message: currentMessageInput(),
+  };
+}
+
+async function run(force) {
+  const body = {...settings(), force: !!force};
+  const res = await fetch("/api/experiments", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)});
+  const data = await res.json();
+  if (!res.ok) { alert(data.detail || "cannot start"); return; }
+  experiment = data; selected = null; streamBuf = "";
+  localStorage.setItem("vee-lab-id", data.id);
+  render(); connect(data.id);
+}
+
+async function stop() {
+  if (!experiment) return;
+  await fetch(`/api/experiments/${experiment.id}/stop`, {method:"POST"});
+}
+
+function resetView() {
+  if (es) es.close();
+  experiment = null; selected = null; streamBuf = "";
+  localStorage.removeItem("vee-lab-id");
+  render(); setConn(true, "idle"); $("stream").textContent = "";
+}
+
+function connect(id) {
+  if (es) es.close();
+  streamBuf = "";
+  es = new EventSource(`/api/experiments/${id}/events`);
+  es.addEventListener("lab", (ev) => {
+    const msg = JSON.parse(ev.data);
+    if (msg.type === "snapshot" && msg.experiment) { experiment = msg.experiment; streamBuf = msg.stream || ""; }
+    if (msg.type === "started") experiment = msg.experiment;
+    if (msg.type === "stream") { streamBuf += msg.delta; $("stream").textContent = streamBuf; $("streamNote").textContent = "streaming (unscored)"; }
+    if (msg.type === "run_completed") {
+      streamBuf = "";
+      $("streamNote").textContent = "run complete";
+      if (!experiment.runs) experiment.runs = [];
+      const i = experiment.runs.findIndex(r => r.run_number === msg.run.run_number);
+      if (i >= 0) experiment.runs[i] = msg.run; else experiment.runs.push(msg.run);
+      experiment.metrics = msg.metrics;
+      selected = msg.run;
+    }
+    if (msg.type === "finished") {
+      experiment = msg.experiment || experiment;
+      if (experiment) experiment.status = msg.status;
+      scenarioPeriodStats = null;
+      scenarioPeriodId = null;
+    }
+    render();
+  });
+  es.onopen = () => setConn(true, (experiment && experiment.status) || "running");
+  es.onerror = () => setConn(false, "reconnecting");
+}
+
+function render() {
+  const running = experiment && experiment.status === "running";
+  $("runBtn").disabled = !!running;
+  $("stopBtn").disabled = !running;
+  const sid = experiment && experiment.settings && experiment.settings.scenario;
+  const srow = ((meta && meta.scenarios) || []).find(s => s.id === sid);
+  if (srow) $("scenario").textContent = srow.title;
+  syncScenarioChips();
+  const m = (experiment && experiment.metrics) || {};
+  $("metricsGates").innerHTML = metricCells(gateKeys, m);
+  $("metricsContract").innerHTML = contractCards(m);
+  $("metricsOps").innerHTML = metricCells(opsKeys, m);
+  const runs = (experiment && experiment.runs) || [];
+  const total = (experiment && experiment.settings && experiment.settings.runs) || Number($("runs").value);
+  const done = runs.filter(r => r.evaluation).length;
+  const n = experiment ? String(experiment.number).padStart(2,"0") : "—";
+  const pct = total ? Math.round(100 * done / total) : 0;
+  $("progressLabel").textContent = experiment ? `Experiment ${n}  ${running ? "Running" : (experiment.status||"")}  ${done} / ${total}` : "No experiment";
+  $("progressPct").textContent = String(pct).padStart(2, "0") + "%";
+  $("bar").style.width = pct + "%";
+  $("progressPanel").classList.toggle("live", !!running);
+  setConn(true, experiment ? experiment.status : "idle");
+  $("runsBody").innerHTML = runs.map(r => {
+    const ev = r.evaluation || {};
+    const lat = (ev.latency || {}).total_s;
+    const tok = ((ev.usage||{}).input_tokens||0) + ((ev.usage||{}).output_tokens||0);
+    const cost = (ev.usage||{}).cost_usd;
+    const on = selected && selected.run_number === r.run_number ? "active" : "";
+    const kind = failKind(r);
+    return `<tr class="${on}" onclick="pick(${r.run_number})">
+      <td>${String(r.run_number).padStart(2,"0")}</td>
+      <td class="${(r.status||"").toLowerCase()}" title="${esc(r.error||(ev.json_error||""))}">${r.status||"—"}</td>
+      <td class="cause ${kind}" title="${esc(r.error||(ev.json_error||""))}">${failLabel(kind)}</td>
+      <td>${fmt((ev.scores||{}).overall, "weighted_accuracy")}</td>
+      <td>${lat == null ? "—" : lat.toFixed(2)+"s"}</td>
+      <td>${(ev.usage||{}).input_tokens == null && (ev.usage||{}).output_tokens == null ? "—" : tok}</td>
+      <td>${cost == null ? "—" : "$"+Number(cost).toFixed(6)}</td></tr>`;
+  }).join("") || `<tr><td colspan="7" class="notes">No requests yet</td></tr>`;
+  drawCharts(runs);
+  renderPeriodStats();
+  if (selected) showInspector(selected);
+  $("stream").textContent = streamBuf;
+}
+
+function periodLabel(row) {
+  if (!row || row.missing) return "(none)";
+  return `${row.start || "null"} → ${row.end || "null"}`;
+}
+
+function tallyPeriodField(runs, pick) {
+  const counts = new Map();
+  let n = 0;
+  for (const run of runs) {
+    const parsed = (run.evaluation || {}).parsed;
+    if (!parsed) continue;
+    n += 1;
+    const key = JSON.stringify(pick(parsed));
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([key, count]) => {
+    const pair = JSON.parse(key);
+    const missing = pair == null || (pair.start == null && pair.end == null);
+    return {
+      start: missing ? null : pair.start || null,
+      end: missing ? null : pair.end || null,
+      missing,
+      count,
+      pct: n ? Math.round(10 * 100 * count / n) / 10 : 0,
+    };
+  });
+}
+
+function statsFromRuns(runs) {
+  const scored = (runs || []).filter((r) => (r.evaluation || {}).parsed);
+  return {
+    n: scored.length,
+    requested_period: tallyPeriodField(scored, (p) => {
+      const period = (((p.judge || {}).understanding) || {}).requested_period;
+      if (!period || typeof period !== "object") return null;
+      return { start: period.start || null, end: period.end || null };
+    }),
+    scope: tallyPeriodField(scored, (p) => {
+      const scope = (((p.say || {}).testimony) || {}).scope;
+      if (!scope || typeof scope !== "object") return null;
+      return { start: scope.start || null, end: scope.end || null };
+    }),
+  };
+}
+
+function renderPeriodColumn(title, rows) {
+  const body = (rows || []).length
+    ? rows.map((row) => {
+        const width = Math.max(0, Math.min(100, Number(row.pct) || 0));
+        return `<div>
+          <div class="period-row">
+            <span class="period-dates" title="${esc(periodLabel(row))}">${esc(periodLabel(row))}</span>
+            <span class="period-count">${row.count}</span>
+            <span class="period-pct">${Number(row.pct).toFixed(1)}%</span>
+          </div>
+          <div class="period-bar"><i style="width:${width}%"></i></div>
+        </div>`;
+      }).join("")
+    : `<div class="period-empty">No scored periods yet.</div>`;
+  return `<div class="period-col">
+    <span class="score-label">${esc(title)}</span>
+    ${body}
+  </div>`;
+}
+
+function selectedScenarioId() {
+  return (experiment && experiment.settings && experiment.settings.scenario)
+    || ($("scenarioSelect") && $("scenarioSelect").value)
+    || ((meta && meta.defaults) || {}).scenario;
+}
+
+async function loadScenarioPeriodStats() {
+  const sid = selectedScenarioId();
+  if (!sid) return;
+  if (scenarioPeriodId === sid && scenarioPeriodStats) return;
+  const res = await fetch(`/api/period-stats?scenario=${encodeURIComponent(sid)}`);
+  if (!res.ok) return;
+  scenarioPeriodStats = await res.json();
+  scenarioPeriodId = sid;
+}
+
+async function renderPeriodStats() {
+  const el = $("periodStats");
+  const note = $("periodNote");
+  if (!el) return;
+  let stats;
+  if (periodSrc === "scenario") {
+    await loadScenarioPeriodStats();
+    stats = scenarioPeriodStats || { n: 0, requested_period: [], scope: [] };
+    if (note) note.textContent = `${stats.n} scored run${stats.n === 1 ? "" : "s"} in ${stats.scenario_id || selectedScenarioId() || "scenario"}`;
+  } else {
+    stats = statsFromRuns((experiment && experiment.runs) || []);
+    if (note) note.textContent = `${stats.n} scored run${stats.n === 1 ? "" : "s"} in this experiment`;
+  }
+  el.innerHTML = renderPeriodColumn("Judge requested_period", stats.requested_period)
+    + renderPeriodColumn("Say testimony.scope", stats.scope);
+}
+
+$("periodTabs").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b || !b.dataset.periodSrc) return;
+  periodSrc = b.dataset.periodSrc;
+  [...$("periodTabs").querySelectorAll("button")].forEach((x) => x.classList.toggle("on", x === b));
+  if (periodSrc === "scenario") scenarioPeriodStats = null;
+  renderPeriodStats();
+});
+
+window.pick = (n) => {
+  selected = ((experiment && experiment.runs) || []).find(r => r.run_number === n);
+  render();
+};
+
+$("tabs").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  tab = b.dataset.tab;
+  [...$("tabs").querySelectorAll("button")].forEach(x => x.classList.toggle("on", x === b));
+  if (selected) showInspector(selected);
+});
+
+function showInspector(run) {
+  const ev = run.evaluation || {};
+  const parsed = ev.parsed;
+  if (tab === "raw") {
+    $("inspector").innerHTML = `<pre>${syntax(run.raw_response || "")}</pre>`;
+    return;
+  }
+  if (tab === "eval") {
+    const all = [...(ev.checks||{}).judge||[], ...(ev.checks||{}).plan||[], ...(ev.checks||{}).say||[]];
+    const top = (run.error || ev.json_error) ? `<div class="chk"><i style="background:var(--red)"></i><div><b>Run error</b><div class="notes">${esc(run.error || ev.json_error)}</div></div></div>` : "";
+    $("inspector").innerHTML = top + renderChecks(all) + (ev.schema_errors||[]).map(s => `<div class="chk"><i style="background:var(--red)"></i><div>${esc(s)}</div></div>`).join("");
+    return;
+  }
+  if (tab === "judge") $("inspector").innerHTML = block("JUDGE", parsed && parsed.judge) + renderChecks((ev.checks||{}).judge||[]);
+  if (tab === "plan") $("inspector").innerHTML = block("PLAN", parsed && parsed.plan) + renderChecks((ev.checks||{}).plan||[]);
+  if (tab === "say") $("inspector").innerHTML = block("SAY", parsed && parsed.say) + renderChecks((ev.checks||{}).say||[]);
+}
+
+function renderChecks(list) {
+  if (!list.length) return `<div class="notes">No checks (invalid JSON or in-flight).</div>`;
+  return list.map(c => `<div class="chk"><i style="background:${color(c.status)}"></i>
+    <div><b>${esc(c.label)}</b> <span class="notes">${c.status}</span><div class="notes">${esc(c.explanation)}</div>
+    <div class="notes">expected: ${esc(JSON.stringify(c.expected))}</div>
+    <div class="notes">actual: ${esc(JSON.stringify(c.actual))}</div></div></div>`).join("");
+}
+
+function block(title, obj) {
+  if (!obj) return `<div class="notes">No parsed ${title}.</div>`;
+  return `<pre>${syntax(JSON.stringify(obj, null, 2))}</pre>`;
+}
+
+function syntax(text) {
+  return esc(text).replace(/"([^"]+)"(\s*:)/g, '<span class="k">"$1"</span>$2')
+    .replace(/: "([^"]*)"/g, ': <span class="s">"$1"</span>');
+}
+function esc(s) { return String(s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+function drawCharts(runs) {
+  const evs = runs.map(r => r.evaluation).filter(Boolean);
+  const acc = evs.map(e => e.scores.overall);
+  const lat = evs.map(e => (e.latency||{}).total_s || 0);
+  const cost = [];
+  evs.reduce((s,e) => { const n = s + ((e.usage||{}).cost_usd || 0); cost.push(n); return n; }, 0);
+  const tok = evs.map(e => ((e.usage||{}).input_tokens||0)+((e.usage||{}).output_tokens||0));
+  const pass = evs.filter(e => e.gates.strict_pass).length;
+  const fail = evs.length - pass;
+  $("charts").innerHTML = [
+    line("Accuracy", acc, "#3ee0ff"),
+    line("Latency s", lat, "#8b7cff"),
+    line("Cost Σ", cost, "#4d7cff"),
+    line("Tokens", tok, "#3dff9c"),
+    bars("Pass / Fail", pass, fail),
+  ].join("");
+}
+
+function line(title, values, color) {
+  const w=220,h=88,p=8;
+  if (!values.length) return `<div><div class="notes">${title}</div><svg class="chart"></svg></div>`;
+  const max = Math.max(...values, 0.001);
+  const pts = values.map((v,i) => {
+    const x = p + (i/(Math.max(values.length-1,1)))*(w-2*p);
+    const y = h-p - (v/max)*(h-2*p);
+    return x+","+y;
+  }).join(" ");
+  return `<div><div class="notes">${title}</div><svg class="chart" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline fill="none" stroke="${color}" stroke-width="1.6" points="${pts}"/></svg></div>`;
+}
+function bars(title, pass, fail) {
+  const t = pass+fail || 1;
+  return `<div><div class="notes">${title}</div><svg class="chart" viewBox="0 0 220 88">
+    <rect x="20" y="${88-70*(pass/t)}" width="70" height="${70*(pass/t)}" fill="#3dff9c"/>
+    <rect x="120" y="${88-70*(fail/t)}" width="70" height="${70*(fail/t)}" fill="#ff5d73"/></svg></div>`;
+}
+
+async function exportFile(kind) {
+  if (!experiment) return;
+  const url = `/api/experiments/${experiment.id}/export.${kind}`;
+  if (kind === "csv") { location.href = url; return; }
+  const data = await (await fetch(url)).json();
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `vee-lab-${experiment.id}.json`;
+  a.click();
+}
+
+boot();
+</script>
+</body>
+</html>
