@@ -25,6 +25,8 @@ So I decided to build a mechanism that could take over that responsibility.
 
 ## Company Progress Memory Mechanism V1
 
+**[What Kind of Identity Would Fit My Company's Progress Memory Mechanism?](https://x.com/MoTheAgent/status/2115590446076588391)**
+
 ### Primary Responsibility
 
 Vee is the company's witness. Vee witnesses changes in the work and, when asked, testifies from the record.
@@ -62,8 +64,6 @@ The capabilities and requirements here came out of that research.
 **Research chapters:** 
 
 [Chapter 1](https://x.com/MoTheAgent/status/2101079146852147604) · [Chapter 2](https://x.com/MoTheAgent/status/2102167759350378536) · [Chapter 3](https://x.com/MoTheAgent/status/2103616043809927174) · [Chapter 4](https://x.com/MoTheAgent/status/2105066098433609808) · [Chapter 5](https://x.com/MoTheAgent/status/2106152758961410546) · [Chapter 6](https://x.com/MoTheAgent/status/2109776907848065107)
-
-**[What Kind of Identity Would Fit My Company's Progress Memory Mechanism?](https://x.com/MoTheAgent/status/2115590446076588391)**
 
 ## Current Status
 
