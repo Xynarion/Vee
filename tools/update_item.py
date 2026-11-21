@@ -6,8 +6,18 @@ from typing import Literal, Optional
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, field_validator, model_validator
 
+from sqlalchemy.orm import Session
+
 from constants import ITEM_STATUSES, ITEM_TYPES, ITEM_WORK_MODES
 from tools import _fields
+from tools.write import (
+    ToolWriteError,
+    choose_history_kind,
+    load_owned_item,
+    record_history,
+    require_parent,
+    serialize_changes,
+)
 
 NAME = "update_item"
 
@@ -83,3 +93,25 @@ class UpdateItemCall(BaseModel):
 
     name: Literal["update_item"]
     args: UpdateItemArgs
+
+
+def run(db: Session, args: UpdateItemArgs, *, user_id: str, message_id: str) -> tuple[str, dict]:
+    """Apply only the fields the model sent. Omitted stays; null clears."""
+    item = load_owned_item(db, args.id, user_id)
+    applied = args.changes()
+    parent_id = applied.get("parent_id")
+    if parent_id is not None:
+        if parent_id == item.id:
+            raise ToolWriteError("item cannot be its own parent")
+        require_parent(db, parent_id, user_id)
+    for key, value in applied.items():
+        setattr(item, key, value)
+    record_history(
+        db,
+        item_id=item.id,
+        message_id=message_id,
+        kind=choose_history_kind(applied, created=False),
+        changes=applied,
+    )
+    db.flush()
+    return item.id, serialize_changes(applied)

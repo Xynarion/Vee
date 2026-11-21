@@ -6,8 +6,13 @@ from typing import Literal, Optional
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, field_validator
 
+from sqlalchemy.orm import Session
+
 from constants import ITEM_STATUSES, ITEM_TYPES, ITEM_WORK_MODES
+from memory.db import new_id
+from memory.models import Item
 from tools import _fields
+from tools.write import choose_history_kind, record_history, require_parent, serialize_changes
 
 NAME = "add_item"
 
@@ -57,3 +62,42 @@ class AddItemCall(BaseModel):
 
     name: Literal["add_item"]
     args: AddItemArgs
+
+
+def run(db: Session, args: AddItemArgs, *, user_id: str, message_id: str) -> tuple[str, dict]:
+    """Insert one item and its created history. The code assigns both ids."""
+    require_parent(db, args.parent_id, user_id)
+    item_id = new_id("itm")
+    written = {
+        "title": args.title,
+        "type": args.type,
+        "status": args.status,
+    }
+    for name in ("parent_id", "start_at", "end_at", "due_at", "work_mode"):
+        value = getattr(args, name)
+        if value is not None:
+            written[name] = value
+    db.add(
+        Item(
+            id=item_id,
+            user_id=user_id,
+            type=args.type,
+            title=args.title,
+            parent_id=args.parent_id,
+            start_at=args.start_at,
+            end_at=args.end_at,
+            due_at=args.due_at,
+            status=args.status,
+            work_mode=args.work_mode,
+            flags=[],
+        )
+    )
+    record_history(
+        db,
+        item_id=item_id,
+        message_id=message_id,
+        kind=choose_history_kind(written, created=True),
+        changes=written,
+    )
+    db.flush()
+    return item_id, serialize_changes(written)
