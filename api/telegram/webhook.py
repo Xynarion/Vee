@@ -1,4 +1,4 @@
-"""POST /telegram/webhook — receive update, store turn, assemble, infer, accept, echo reply."""
+"""POST /telegram/webhook — receive update, store turn, assemble, infer, accept, reply."""
 
 from __future__ import annotations
 
@@ -10,10 +10,14 @@ from typing import Any, Dict, Optional, Tuple
 from fastapi import APIRouter, Header, HTTPException, Request
 
 from api.telegram.client import send_message
+from api.telegram.reply import format_reply, read_testimony_ids
 from llm.infer import infer_decision
 from llm.validate import accept_model_output
+from memory.db import db_session
 from memory.operations.ingress import ingress_turn
+from memory.operations.items import load_testimony_items
 from memory.operations.state import assemble_interaction_state
+from tools.execute import execute_plan
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +93,7 @@ async def telegram_webhook(
             logger.exception("infer_decision failed; continuing with echo")
 
     # 6. Validate. Parse the JSON into a Decision, or use the clarification fallback. No retry.
+    decision = None
     if result is not None:
         decision = accept_model_output(result.raw_text)
         logger.info(
@@ -97,6 +102,34 @@ async def telegram_webhook(
             len(decision.plan.tool_calls),
         )
 
-    # 7. Reply. Still the echo. The Decision is logged, not sent.
-    await send_message(chat_id=chat_id, text=f"you said: {text}")
+    # 7. Execute. Write add_item and update_item. The code assigns history and message_id.
+    try:
+        written = execute_plan(
+            decision.plan.tool_calls,
+            user_id=turn.user_id,
+            message_id=turn.message_id,
+        )
+        logger.info(
+            "plan executed: ok=%s failed=%s",
+            sum(1 for row in written if row.ok),
+            sum(1 for row in written if not row.ok),
+        )
+    except Exception:
+        logger.exception("execute_plan failed; continuing with echo")
+
+    # 8. Reply. Testimony ids become a symbol list. Otherwise send say.text.
+    reply = f"you said: {text}"
+    if decision is not None and isinstance(decision.say.text, str) and decision.say.text.strip():
+        reply = decision.say.text.strip()
+    item_ids = read_testimony_ids(decision) if decision is not None else []
+    if item_ids:
+        try:
+            with db_session() as db:
+                items = load_testimony_items(db, turn.user_id, item_ids)
+            formatted = format_reply(decision, items)
+            if formatted:
+                reply = formatted
+        except Exception:
+            logger.exception("format_reply failed; continuing with echo")
+    await send_message(chat_id=chat_id, text=reply)
     return {"status": "ok"}

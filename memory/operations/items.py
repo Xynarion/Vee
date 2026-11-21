@@ -2,11 +2,23 @@
 
 from __future__ import annotations
 
+from typing import Sequence
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from constants import ACTIVE_STATUSES
 from memory.models import Item
+
+
+def load_testimony_items(db: Session, user_id: str, item_ids: Sequence[str]) -> list[Item]:
+    """Items this user owns among the testimony ids. Order is applied by the reply."""
+    if not item_ids:
+        return []
+    rows = db.scalars(
+        select(Item).where(Item.user_id == user_id, Item.id.in_(tuple(item_ids)))
+    ).all()
+    return list(rows)
 
 
 def list_current_items(db: Session, user_id: str) -> list[Item]:
