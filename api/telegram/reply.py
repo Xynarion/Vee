@@ -20,6 +20,18 @@ def read_testimony_ids(decision: Any) -> list[str]:
     return [item_id for item_id in ids if isinstance(item_id, str) and item_id]
 
 
+def compose_message_text(decision: Any) -> Optional[str]:
+    """say.text plus the testimony ids, in order. Symbols and titles stay out."""
+    say = getattr(decision, "say", None)
+    raw = getattr(say, "text", None)
+    header = raw.strip() if isinstance(raw, str) else ""
+    lines = [header] if header else []
+    lines.extend(read_testimony_ids(decision))
+    if not lines:
+        return None
+    return "\n".join(lines)
+
+
 def format_reply(decision: Any, items: Sequence[Any]) -> Optional[str]:
     """Header plus one symbol and title per owned item. None keeps the echo."""
     ids = read_testimony_ids(decision)

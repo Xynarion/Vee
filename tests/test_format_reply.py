@@ -74,3 +74,30 @@ def test_format_reply_with_no_visible_lines_returns_none() -> None:
     reply = format_reply(build_testimony([MISSING], text="  "), [])
     show_reply("blank header and an id that is not loaded", reply)
     assert reply is None
+
+
+def test_compose_message_text_keeps_header_and_ids() -> None:
+    from api.telegram.reply import compose_message_text
+
+    stored = compose_message_text(build_testimony([EVENT, TASK, MISSING]))
+    show_reply("stored message keeps the ids, not the symbols", stored)
+    assert stored == f"What you have today\n{EVENT}\n{TASK}\n{MISSING}"
+
+
+def test_compose_message_text_is_say_text_without_testimony() -> None:
+    from api.telegram.reply import compose_message_text
+
+    stored = compose_message_text(confirmation_decision())
+    show_reply("stored confirmation", stored)
+    assert stored == "Recorded."
+
+
+def test_compose_message_text_is_empty_for_silence() -> None:
+    from api.telegram.reply import compose_message_text
+
+    decision = confirmation_decision()
+    decision.say.text = None
+    decision.say.types = ["silence"]
+    stored = compose_message_text(decision)
+    show_reply("silence stores nothing", stored)
+    assert stored is None

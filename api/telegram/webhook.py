@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional, Tuple
 from fastapi import APIRouter, Header, HTTPException, Request
 
 from api.telegram.client import send_message
-from api.telegram.reply import format_reply, read_testimony_ids
+from api.telegram.reply import compose_message_text, format_reply, read_testimony_ids
 from llm.infer import infer_decision
 from llm.validate import accept_model_output
 from memory.db import db_session
@@ -132,4 +132,17 @@ async def telegram_webhook(
         except Exception:
             logger.exception("format_reply failed; continuing with echo")
     await send_message(chat_id=chat_id, text=reply)
+
+    # 9. Remember the words and the ids shown. The symbol list stays on Telegram.
+    stored = compose_message_text(decision) if decision is not None else None
+    if stored:
+        try:
+            ingress_turn(
+                platform="telegram",
+                platform_user_id=chat_id,
+                role="assistant",
+                text=stored,
+            )
+        except Exception:
+            logger.exception("storing the reply failed")
     return {"status": "ok"}

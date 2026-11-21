@@ -114,7 +114,7 @@ def test_webhook_skips_inference_when_assemble_fails(client: TestClient) -> None
         text="hello memory",
     )
     with (
-        patch("api.telegram.webhook.ingress_turn", return_value=turn),
+        patch("api.telegram.webhook.ingress_turn", return_value=turn) as ingress,
         patch(
             "api.telegram.webhook.assemble_interaction_state",
             side_effect=RuntimeError("db down"),
@@ -132,6 +132,12 @@ def test_webhook_skips_inference_when_assemble_fails(client: TestClient) -> None
     assert response.status_code == 200
     infer.assert_not_called()
     accept.assert_not_called()
+    ingress.assert_called_once_with(
+        platform="telegram",
+        platform_user_id="42",
+        role="user",
+        text="hello memory",
+    )
     send.assert_awaited_once_with(chat_id="42", text="you said: hello memory")
 
 
@@ -152,7 +158,7 @@ def test_webhook_accepts_model_output(client: TestClient, caplog: pytest.LogCapt
         latency_s=1.2,
     )
     with (
-        patch("api.telegram.webhook.ingress_turn", return_value=turn),
+        patch("api.telegram.webhook.ingress_turn", return_value=turn) as ingress,
         patch("api.telegram.webhook.assemble_interaction_state", return_value=state),
         patch("api.telegram.webhook.infer_decision", return_value=inferred),
         patch("api.telegram.webhook.execute_plan") as execute,
@@ -170,6 +176,12 @@ def test_webhook_accepts_model_output(client: TestClient, caplog: pytest.LogCapt
     execute.assert_called_once()
     assert execute.call_args.kwargs["user_id"] == turn.user_id
     assert execute.call_args.kwargs["message_id"] == turn.message_id
+    ingress.assert_any_call(
+        platform="telegram",
+        platform_user_id="42",
+        role="assistant",
+        text="Recorded:",
+    )
 
 
 def test_webhook_invalid_json_falls_back(client: TestClient, caplog: pytest.LogCaptureFixture) -> None:
@@ -185,7 +197,7 @@ def test_webhook_invalid_json_falls_back(client: TestClient, caplog: pytest.LogC
     state = SimpleNamespace(recent_turns=(), current_items=(), prompt="THE PLATE")
     inferred = InferenceResult(raw_text="not json", model="Qwen/Qwen3.5-9B", latency_s=1.2)
     with (
-        patch("api.telegram.webhook.ingress_turn", return_value=turn),
+        patch("api.telegram.webhook.ingress_turn", return_value=turn) as ingress,
         patch("api.telegram.webhook.assemble_interaction_state", return_value=state),
         patch("api.telegram.webhook.infer_decision", return_value=inferred),
         patch("api.telegram.webhook.send_message", new_callable=AsyncMock) as send,
@@ -200,6 +212,12 @@ def test_webhook_invalid_json_falls_back(client: TestClient, caplog: pytest.LogC
     assert response.status_code == 200
     assert "decision accepted: say=['clarification'] tool_calls=0" in caplog.text
     send.assert_awaited_once_with(chat_id="42", text=FALLBACK_RESPONSE_TEXT)
+    ingress.assert_any_call(
+        platform="telegram",
+        platform_user_id="42",
+        role="assistant",
+        text=FALLBACK_RESPONSE_TEXT,
+    )
 
 
 def test_webhook_sends_testimony_list(client: TestClient) -> None:
@@ -216,7 +234,7 @@ def test_webhook_sends_testimony_list(client: TestClient) -> None:
     decision = build_testimony([EVENT, TASK])
     inferred = InferenceResult(raw_text="{}", model="Qwen/Qwen3.5-9B", latency_s=1.2)
     with (
-        patch("api.telegram.webhook.ingress_turn", return_value=turn),
+        patch("api.telegram.webhook.ingress_turn", return_value=turn) as ingress,
         patch("api.telegram.webhook.assemble_interaction_state", return_value=state),
         patch("api.telegram.webhook.infer_decision", return_value=inferred),
         patch("api.telegram.webhook.accept_model_output", return_value=decision),
@@ -237,4 +255,10 @@ def test_webhook_sends_testimony_list(client: TestClient) -> None:
     send.assert_awaited_once_with(
         chat_id="42",
         text="What you have today\n○ Family meeting\n• Finalize landing copy",
+    )
+    ingress.assert_any_call(
+        platform="telegram",
+        platform_user_id="42",
+        role="assistant",
+        text=f"What you have today\n{EVENT}\n{TASK}",
     )
