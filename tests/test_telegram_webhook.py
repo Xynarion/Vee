@@ -1,4 +1,4 @@
-"""M2 webhook — secret check, store via ingress, echo sendMessage (mocked)."""
+"""M2 webhook — secret check, store via ingress, send say.text (mocked)."""
 
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ def test_webhook_ignores_non_text(client: TestClient) -> None:
     assert response.json() == {"status": "ignored"}
 
 
-def test_webhook_stores_and_echoes(client: TestClient) -> None:
+def test_webhook_stores_and_stays_silent_without_say_text(client: TestClient) -> None:
     turn = Turn(
         user_id="usr_1",
         channel_id="chn_1",
@@ -100,7 +100,7 @@ def test_webhook_stores_and_echoes(client: TestClient) -> None:
     infer.assert_called_once_with("THE PLATE")
     accept.assert_called_once_with(inferred.raw_text)
     execute.assert_called_once()
-    send.assert_awaited_once_with(chat_id="42", text="you said: hello memory")
+    send.assert_not_awaited()
 
 
 def test_webhook_skips_inference_when_assemble_fails(client: TestClient) -> None:
@@ -138,7 +138,7 @@ def test_webhook_skips_inference_when_assemble_fails(client: TestClient) -> None
         role="user",
         text="hello memory",
     )
-    send.assert_awaited_once_with(chat_id="42", text="you said: hello memory")
+    send.assert_not_awaited()
 
 
 def test_webhook_accepts_model_output(client: TestClient, caplog: pytest.LogCaptureFixture) -> None:
@@ -254,7 +254,7 @@ def test_webhook_sends_testimony_list(client: TestClient) -> None:
     load.assert_called_once_with(None, "usr_1", [EVENT, TASK])
     send.assert_awaited_once_with(
         chat_id="42",
-        text="What you have today\n○ Family meeting\n• Finalize landing copy",
+        text="What you have today: \n○ Family meeting\n• Finalize landing copy",
     )
     ingress.assert_any_call(
         platform="telegram",

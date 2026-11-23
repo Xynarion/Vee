@@ -33,7 +33,7 @@ def compose_message_text(decision: Any) -> Optional[str]:
 
 
 def format_reply(decision: Any, items: Sequence[Any]) -> Optional[str]:
-    """Header plus one symbol and title per owned item. None keeps the echo."""
+    """Header plus one symbol and title per owned item. None sends nothing."""
     ids = read_testimony_ids(decision)
     if not ids:
         return None
@@ -55,7 +55,7 @@ def format_reply(decision: Any, items: Sequence[Any]) -> Optional[str]:
     if not lines and not header:
         return None
     if header and lines:
-        return f"{header}\n" + "\n".join(lines)
+        return f"{header}: \n" + "\n".join(lines)
     if header:
         return f"{header}"
     return "\n".join(lines)

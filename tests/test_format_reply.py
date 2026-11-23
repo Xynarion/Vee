@@ -49,7 +49,7 @@ def test_format_reply_lists_symbols_in_testimony_order() -> None:
 
     reply = format_reply(build_testimony([EVENT, TASK, MISSING]), items())
     show_reply("testimony list, event then task; missing id dropped", reply)
-    assert reply == "What you have today\n○ Family meeting\n• Finalize landing copy"
+    assert reply == "What you have today: \n○ Family meeting\n• Finalize landing copy"
 
 
 def test_format_reply_skips_a_missing_id() -> None:
@@ -57,7 +57,7 @@ def test_format_reply_skips_a_missing_id() -> None:
 
     reply = format_reply(build_testimony([MISSING, TASK]), items())
     show_reply("missing id first, then the task", reply)
-    assert reply == "What you have today\n• Finalize landing copy"
+    assert reply == "What you have today: \n• Finalize landing copy"
 
 
 def test_format_reply_without_testimony_returns_none() -> None:

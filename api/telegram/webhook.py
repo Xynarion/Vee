@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from types import SimpleNamespace
 from typing import Any, Dict, Optional, Tuple
 
 from fastapi import APIRouter, Header, HTTPException, Request
@@ -115,23 +116,28 @@ async def telegram_webhook(
             sum(1 for row in written if not row.ok),
         )
     except Exception:
-        logger.exception("execute_plan failed; continuing with echo")
+        logger.exception("execute_plan failed; continuing without a reply")
 
-    # 8. Reply. Testimony ids become a symbol list. Otherwise send say.text.
-    reply = f"you said: {text}"
+    # 8. Reply. Testimony ids become a symbol list. Otherwise send say.text. Empty text sends nothing.
+    reply = None
     if decision is not None and isinstance(decision.say.text, str) and decision.say.text.strip():
         reply = decision.say.text.strip()
     item_ids = read_testimony_ids(decision) if decision is not None else []
     if item_ids:
         try:
             with db_session() as db:
-                items = load_testimony_items(db, turn.user_id, item_ids)
+                rows = load_testimony_items(db, turn.user_id, item_ids)
+                items = [
+                    SimpleNamespace(id=row.id, type=str(row.type), title=row.title)
+                    for row in rows
+                ]
             formatted = format_reply(decision, items)
             if formatted:
                 reply = formatted
         except Exception:
-            logger.exception("format_reply failed; continuing with echo")
-    await send_message(chat_id=chat_id, text=reply)
+            logger.exception("format_reply failed; continuing without a reply")
+    if reply:
+        await send_message(chat_id=chat_id, text=reply)
 
     # 9. Remember the words and the ids shown. The symbol list stays on Telegram.
     stored = compose_message_text(decision) if decision is not None else None
