@@ -1,12 +1,12 @@
 services:
   db:
     image: postgres:16
-    container_name: memory-db
+    container_name: progress-memory-db
     restart: unless-stopped
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-memory}
+      POSTGRES_DB: ${POSTGRES_DB:-progress-memory}
       POSTGRES_USER: ${POSTGRES_USER:-memory}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-memory}
     volumes:
@@ -34,7 +34,7 @@ services:
 
   app:
     build: .
-    container_name: memory-app
+    container_name: vee-backend-app
     restart: unless-stopped
     env_file:
       - .env
