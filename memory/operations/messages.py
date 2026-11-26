@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Sequence
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -29,6 +31,18 @@ def create_message(
     db.add(message)
     db.flush()
     return message
+
+
+def load_messages(db: Session, user_id: str, message_ids: Sequence[str]) -> list[Message]:
+    """This user's messages among the ids, oldest first."""
+    if not message_ids:
+        return []
+    rows = db.scalars(
+        select(Message)
+        .where(Message.user_id == user_id, Message.id.in_(tuple(message_ids)))
+        .order_by(Message.created_at, Message.id)
+    ).all()
+    return list(rows)
 
 
 def list_recent_messages(

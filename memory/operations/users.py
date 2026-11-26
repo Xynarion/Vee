@@ -2,12 +2,24 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from memory.db import new_id
 from memory.models import User, UserChannel
 from settings import DEFAULT_TIMEZONE
+
+
+def find_user_id(db: Session, *, platform: str, platform_user_id: str) -> Optional[str]:
+    """User id behind a platform identity, or None. Never creates rows."""
+    return db.scalar(
+        select(UserChannel.user_id).where(
+            UserChannel.platform == platform,
+            UserChannel.platform_user_id == platform_user_id,
+        )
+    )
 
 
 def get_or_create_user(
