@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from api.inspector.routes import router as inspector_router
 from api.telegram import client as telegram_client
 from api.telegram.webhook import router as telegram_router
 
@@ -35,6 +36,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(title="Company Progress Memory", lifespan=lifespan)
     app.include_router(telegram_router)
+    app.include_router(inspector_router)
 
     @app.get("/health")
     def health() -> dict[str, str]:

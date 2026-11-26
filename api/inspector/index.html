@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="robots" content="noindex"/>
+<title>My Company — Inspector</title>
+<style>
+  :root {
+    --bg: var(--tg-theme-bg-color, #ffffff);
+    --surface: var(--tg-theme-secondary-bg-color, #f3f4f6);
+    --text: var(--tg-theme-text-color, #111827);
+    --muted: var(--tg-theme-hint-color, #6b7280);
+    --accent: var(--tg-theme-link-color, #2563eb);
+    --line: rgba(127, 127, 127, .2);
+    --danger: #dc2626;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: var(--tg-theme-bg-color, #111111);
+      --surface: var(--tg-theme-secondary-bg-color, #1b1b1d);
+      --text: var(--tg-theme-text-color, #f2f2f2);
+      --muted: var(--tg-theme-hint-color, #9a9a9e);
+      --accent: var(--tg-theme-link-color, #60a5fa);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%; }
+  button { font: inherit; color: inherit; }
+  .app { max-width: 640px; margin: 0 auto; min-height: 100vh; }
+
+  header {
+    position: sticky; top: 0; z-index: 2; background: var(--bg);
+    display: flex; align-items: center; gap: 6px;
+    padding: calc(10px + env(safe-area-inset-top)) 10px 10px;
+  }
+  .icon {
+    flex: none; width: 40px; height: 40px; display: grid; place-items: center;
+    border: 0; background: none; border-radius: 50%; cursor: pointer; color: var(--text);
+  }
+  .icon:active { background: var(--line); }
+  .icon[hidden] { display: none; }
+  .icon svg { width: 20px; height: 20px; }
+  .icon.spin svg { animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .heading { flex: 1; min-width: 0; padding-left: 6px; }
+  .heading h1 { margin: 0; font-size: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .heading p { margin: 1px 0 0; font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  main { padding: 6px 16px calc(32px + env(safe-area-inset-bottom)); }
+
+  /* list */
+  .list { list-style: none; margin: 0; padding: 0; border-radius: 14px; overflow: hidden; background: var(--surface); }
+  .list > li { content-visibility: auto; contain-intrinsic-size: auto 64px; }
+  .list > li + li { border-top: 1px solid var(--line); }
+  .row {
+    display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: center;
+    width: 100%; padding: 12px 14px; border: 0; background: none;
+    text-align: left; cursor: pointer; min-height: 60px;
+  }
+  .row:active { background: var(--line); }
+  .symbol { font-size: 22px; line-height: 1; text-align: center; }
+  .title { font-weight: 500; overflow-wrap: anywhere; }
+  .meta { font-size: 13px; color: var(--muted); }
+  .chevron { color: var(--muted); font-size: 20px; }
+  .done .title { color: var(--muted); text-decoration: line-through; }
+  .list-foot { text-align: center; color: var(--muted); font-size: 13px; padding: 16px 0 4px; }
+  .list-foot button { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 6px; }
+
+  /* states */
+  .state { text-align: center; padding: 56px 24px; color: var(--muted); }
+  .state strong { display: block; color: var(--text); font-size: 17px; margin-bottom: 6px; }
+  .state button {
+    margin-top: 16px; border: 1px solid var(--line); background: var(--surface);
+    padding: 10px 18px; border-radius: 10px; cursor: pointer;
+  }
+  .state.error strong { color: var(--danger); }
+  .skeleton { height: 14px; border-radius: 6px; background: var(--line); animation: pulse 1.2s ease-in-out infinite; }
+  .skeleton.short { width: 40%; margin-top: 8px; height: 11px; }
+  .skeleton-row { padding: 16px 14px; }
+  @keyframes pulse { 50% { opacity: .45; } }
+
+  /* details */
+  .detail h2 { margin: 10px 0 2px; font-size: 26px; line-height: 1.2; font-weight: 600; overflow-wrap: anywhere; }
+  .item-id { color: var(--muted); font-size: 14px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; margin: 22px 0 0; }
+  .facts div { min-width: 0; }
+  .facts dt { color: var(--muted); font-size: 14px; }
+  .facts dd { margin: 2px 0 0; font-size: 18px; font-weight: 500; overflow-wrap: anywhere; }
+  .facts dd.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; font-weight: 400; }
+  .description { margin: 18px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .rule { border: 0; border-top: 1px solid var(--line); margin: 24px 0; }
+  .detail h3 { margin: 0 0 14px; font-size: 18px; font-weight: 600; }
+
+  .timeline { list-style: none; margin: 0; padding: 0; }
+  .step { position: relative; padding: 0 0 20px 32px; }
+  .step:last-child { padding-bottom: 0; }
+  .step::before {
+    content: ""; position: absolute; left: 3px; top: 7px; width: 9px; height: 9px;
+    border: 2px solid var(--text); border-radius: 50%; background: var(--bg);
+  }
+  .step:not(:last-child)::after {
+    content: ""; position: absolute; left: 8px; top: 24px; bottom: 6px; width: 2px; background: var(--line);
+  }
+  .step-kind { font-size: 17px; font-weight: 500; }
+  .step-when { color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .step-change { margin-top: 4px; overflow-wrap: anywhere; }
+  .step-change span { color: var(--muted); }
+  .empty-line { color: var(--muted); }
+
+  details.source { border-radius: 14px; }
+  details.source summary {
+    list-style: none; display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; cursor: pointer; font-size: 17px;
+  }
+  details.source summary::-webkit-details-marker { display: none; }
+  details.source summary svg { width: 20px; height: 20px; color: var(--muted); transition: transform .15s; }
+  details.source[open] summary svg { transform: rotate(180deg); }
+  .bubble { background: var(--surface); border-radius: 12px; padding: 12px 14px; margin-top: 8px; }
+  .bubble p { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .stamps { color: var(--muted); font-size: 13px; margin-top: 24px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <button class="icon" id="back" type="button" hidden aria-label="Back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+    </button>
+    <div class="heading">
+      <h1 id="heading">My Company</h1>
+      <p id="subheading">Vee Inspector · Read only</p>
+    </div>
+    <button class="icon" id="refresh" type="button" aria-label="Refresh">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/></svg>
+    </button>
+  </header>
+  <main id="view" aria-live="polite"></main>
+</div>
+<script>
+(() => {
+  const SYMBOLS = { task: "•", event: "○" };
+  const DONE = new Set(["completed", "cancelled", "dropped"]);
+  const ENUM_FIELDS = new Set(["status", "type", "work_mode"]);
+  const FIELD_LABELS = {
+    due_at: "Due", start_at: "Start", end_at: "End", work_mode: "Work mode",
+    parent_id: "Parent", title: "Title", type: "Type", status: "Status", description: "Description",
+  };
+
+  const view = document.getElementById("view");
+  const back = document.getElementById("back");
+  const refresh = document.getElementById("refresh");
+  const heading = document.getElementById("heading");
+  const subheading = document.getElementById("subheading");
+  history.scrollRestoration = "manual";
+
+  const query = new URLSearchParams(location.search);
+  if (query.get("token")) {
+    sessionStorage.setItem("inspector-token", query.get("token"));
+    query.delete("token");
+    const rest = query.toString();
+    history.replaceState(null, "", location.pathname + (rest ? "?" + rest : "") + location.hash);
+  }
+  const token = sessionStorage.getItem("inspector-token") || "";
+
+  // Loaded pages survive opening an item, so Back returns to the same place.
+  let list = null;
+  let observer = null;
+
+  function el(tag, props, children) {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(props || {})) {
+      if (value === undefined || value === null || value === false) continue;
+      if (key === "text") node.textContent = value;
+      else if (key === "onclick") node.addEventListener("click", value);
+      else node.setAttribute(key, value === true ? "" : value);
+    }
+    for (const child of [].concat(children || [])) {
+      if (child !== null && child !== undefined && child !== false) node.append(child);
+    }
+    return node;
+  }
+
+  const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+  const THIS_YEAR = new Date().getFullYear();
+  function formatTime(value) {
+    if (!value) return "Not set";
+    if (!ISO.test(value)) return value;
+    const moment = new Date(value);
+    if (isNaN(moment)) return value;
+    const options = { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" };
+    if (moment.getFullYear() !== THIS_YEAR) options.year = "numeric";
+    return moment.toLocaleString(undefined, options);
+  }
+  function humanize(value) {
+    if (!value) return "Not set";
+    const text = String(value).replace(/_/g, " ");
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+  function formatField(key, value) {
+    if (value === null || value === undefined || value === "") return "Not set";
+    if (ENUM_FIELDS.has(key)) return humanize(value);
+    if (typeof value === "string" && ISO.test(value)) return formatTime(value);
+    if (typeof value === "object") return JSON.stringify(value);
+    return String(value);
+  }
+  function fieldLabel(key) {
+    return FIELD_LABELS[key] || humanize(key);
+  }
+
+  async function fetchJson(path) {
+    const response = await fetch(path, { headers: { "X-Inspector-Token": token } });
+    if (!response.ok) {
+      let detail = response.statusText;
+      try { detail = (await response.json()).detail || detail; } catch (_) {}
+      const error = new Error(detail);
+      error.status = response.status;
+      throw error;
+    }
+    return response.json();
+  }
+
+  function setHeader(title, subtitle, showBack) {
+    heading.textContent = title;
+    subheading.textContent = subtitle;
+    back.hidden = !showBack;
+  }
+
+  function showState(title, body, retry, isError) {
+    view.replaceChildren(el("div", { class: "state" + (isError ? " error" : "") }, [
+      el("strong", { text: title }),
+      el("div", { text: body }),
+      retry ? el("button", { type: "button", text: "Try again", onclick: retry }) : null,
+    ]));
+  }
+
+  function showError(error, retry) {
+    if (error.status === 401) showState("Locked", "Open the Inspector with ?token=… in the address.", null, true);
+    else if (error.status === 404) showState("Not found", "This item is not in your recorded items.", null, true);
+    else showState("Could not load", error.message || "Something went wrong.", retry, true);
+  }
+
+  async function withSpinner(work) {
+    refresh.classList.add("spin");
+    try { await work(); } finally { refresh.classList.remove("spin"); }
+  }
+
+  // ---- Screen 1: recorded items ----
+
+  function describeWhen(item) {
+    if (item.type === "event" && item.start_at) return formatTime(item.start_at);
+    if (item.due_at) return "due " + formatTime(item.due_at);
+    return "recorded " + formatTime(item.created_at);
+  }
+
+  function buildRow(item) {
+    return el("li", { class: DONE.has(item.status) ? "done" : null }, [
+      el("button", { class: "row", type: "button", onclick: () => openItem(item.id) }, [
+        el("span", { class: "symbol", "aria-label": item.type, text: SYMBOLS[item.type] || "–" }),
+        el("span", {}, [
+          el("div", { class: "title", text: item.title }),
+          el("div", { class: "meta", text: `${humanize(item.status)} · ${describeWhen(item)}` }),
+        ]),
+        el("span", { class: "chevron", "aria-hidden": "true", text: "›" }),
+      ]),
+    ]);
+  }
+
+  function openItem(itemId) {
+    if (list) list.scrollY = window.scrollY;
+    location.hash = "#/items/" + itemId;
+  }
+
+  function countLabel(total) {
+    return `Vee Inspector · ${total} recorded item${total === 1 ? "" : "s"}`;
+  }
+
+  function renderFoot() {
+    if (!list.foot) return;
+    if (list.error) {
+      list.foot.replaceChildren("Couldn't load more · ", el("button", { type: "button", text: "Retry", onclick: loadNextPage }));
+    } else if (list.cursor) {
+      list.foot.textContent = list.loading ? "Loading more…" : "";
+    } else {
+      list.foot.textContent = list.total > list.items.length ? "" : `All ${list.total} items`;
+    }
+  }
+
+  async function loadNextPage() {
+    if (!list || list.loading || !list.cursor) return;
+    list.loading = true;
+    list.error = false;
+    renderFoot();
+    try {
+      const page = await fetchJson("/inspector/api/items?cursor=" + encodeURIComponent(list.cursor));
+      list.items.push(...page.items);
+      list.cursor = page.next_cursor;
+      list.total = page.total;
+      if (list.ul) list.ul.append(...page.items.map(buildRow));
+      subheading.textContent = countLabel(list.total);
+    } catch (_) {
+      list.error = true;
+    } finally {
+      list.loading = false;
+      renderFoot();
+    }
+  }
+
+  function showList() {
+    if (observer) observer.disconnect();
+    if (!list.items.length) {
+      showState("Nothing recorded yet", "Tasks and events appear here once Vee records them.");
+      return;
+    }
+    list.ul = el("ul", { class: "list" }, list.items.map(buildRow));
+    list.foot = el("div", { class: "list-foot" });
+    view.replaceChildren(list.ul, list.foot);
+    renderFoot();
+    observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) loadNextPage();
+    }, { rootMargin: "600px 0px" });
+    observer.observe(list.foot);
+  }
+
+  function showListSkeleton() {
+    const rows = [0, 1, 2, 3, 4].map(() => el("li", { class: "skeleton-row" }, [
+      el("div", { class: "skeleton" }), el("div", { class: "skeleton short" }),
+    ]));
+    view.replaceChildren(el("ul", { class: "list", "aria-label": "Loading items" }, rows));
+  }
+
+  async function renderList(reload) {
+    setHeader("My Company", list ? countLabel(list.total) : "Vee Inspector · Read only", false);
+    if (list && !reload) {
+      showList();
+      window.scrollTo(0, list.scrollY || 0);
+      return;
+    }
+    list = null;
+    window.scrollTo(0, 0);
+    showListSkeleton();
+    await withSpinner(async () => {
+      try {
+        const page = await fetchJson("/inspector/api/items");
+        list = { items: page.items, cursor: page.next_cursor, total: page.total, scrollY: 0 };
+        subheading.textContent = countLabel(list.total);
+        showList();
+      } catch (error) {
+        showError(error, () => renderList(true));
+      }
+    });
+  }
+
+  // ---- Screen 2: item details ----
+
+  function describeSchedule(item) {
+    if (item.type === "event" && item.start_at) {
+      return item.end_at ? `${formatTime(item.start_at)} – ${formatTime(item.end_at)}` : formatTime(item.start_at);
+    }
+    if (item.due_at) return formatTime(item.due_at);
+    if (item.start_at) return formatTime(item.start_at);
+    return "Not set";
+  }
+
+  function buildFacts(item) {
+    const facts = [
+      ["Type", humanize(item.type)],
+      ["Status", humanize(item.status)],
+      ["Due / scheduled", describeSchedule(item)],
+    ];
+    if (item.work_mode) facts.push(["Work mode", humanize(item.work_mode)]);
+    if (item.carried_since) facts.push(["Carried since", item.carried_since]);
+    if (item.flags.length) facts.push(["Flags", item.flags.join(", ")]);
+    if (item.parent_id) facts.push(["Parent", item.parent_id, true]);
+    return el("dl", { class: "facts" }, facts.map(([name, value, mono]) => el("div", {}, [
+      el("dt", { text: name }),
+      el("dd", { class: mono ? "mono" : null, text: value }),
+    ])));
+  }
+
+  // History stores only new values; replay it to recover what each change replaced.
+  function describeChanges(history) {
+    const known = {};
+    return history.map((row) => {
+      const lines = [];
+      const changes = row.changes || {};
+      if (row.kind === "created") {
+        if ("status" in changes) lines.push(formatField("status", changes.status));
+        for (const [key, value] of Object.entries(changes)) {
+          if (["title", "type", "status"].includes(key)) continue;
+          lines.push([fieldLabel(key) + ": ", formatField(key, value)]);
+        }
+      } else {
+        for (const [key, value] of Object.entries(changes)) {
+          const before = key in known ? formatField(key, known[key]) : "Not set";
+          const after = formatField(key, value);
+          if (key === "status") lines.push(`${before} → ${after}`);
+          else lines.push([fieldLabel(key) + ": ", `${before} → ${after}`]);
+        }
+      }
+      Object.assign(known, changes);
+      return { row, lines };
+    }).reverse();
+  }
+
+  function buildHistory(history) {
+    if (!history.length) return el("p", { class: "empty-line", text: "No history recorded." });
+    return el("ol", { class: "timeline" }, describeChanges(history).map(({ row, lines }) =>
+      el("li", { class: "step" }, [
+        el("div", { class: "step-kind", text: humanize(row.kind) }),
+        el("div", { class: "step-when", text: formatTime(row.created_at) }),
+        ...lines.map((line) => el("div", { class: "step-change" },
+          Array.isArray(line) ? [el("span", { text: line[0] }), line[1]] : line)),
+      ])
+    ));
+  }
+
+  function buildSource(messages) {
+    const title = messages.length > 1 ? `Original messages (${messages.length})` : "Original message";
+    const body = messages.length
+      ? messages.map((message) => el("div", { class: "bubble" }, [
+          el("div", { class: "meta", text: `${message.role === "assistant" ? "Vee" : "Founder"} · ${formatTime(message.created_at)}` }),
+          el("p", { text: message.text }),
+        ]))
+      : [el("p", { class: "empty-line", text: "No source message linked." })];
+    return el("details", { class: "source" }, [
+      el("summary", {}, [
+        el("span", { text: title }),
+        (() => {
+          const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          icon.setAttribute("viewBox", "0 0 24 24");
+          icon.setAttribute("fill", "none");
+          icon.setAttribute("stroke", "currentColor");
+          icon.setAttribute("stroke-width", "2");
+          icon.innerHTML = '<path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/>';
+          return icon;
+        })(),
+      ]),
+      ...body,
+    ]);
+  }
+
+  function showDetailSkeleton() {
+    view.replaceChildren(el("div", { "aria-label": "Loading item" }, [
+      el("div", { class: "skeleton", style: "height:28px;width:75%;margin:14px 0 10px" }),
+      el("div", { class: "skeleton short", style: "width:30%" }),
+      el("div", { class: "facts" }, [0, 1, 2, 3].map(() => el("div", {}, [
+        el("div", { class: "skeleton short", style: "width:50%" }), el("div", { class: "skeleton", style: "margin-top:8px;width:70%" }),
+      ]))),
+    ]));
+  }
+
+  async function renderItem(itemId) {
+    if (observer) observer.disconnect();
+    setHeader("Item details", "Vee Inspector · Read only", true);
+    window.scrollTo(0, 0);
+    showDetailSkeleton();
+    await withSpinner(async () => {
+      try {
+        const { item, history, messages } = await fetchJson("/inspector/api/items/" + encodeURIComponent(itemId));
+        view.replaceChildren(el("article", { class: "detail" }, [
+          el("h2", { text: item.title }),
+          el("div", { class: "item-id", text: item.id }),
+          buildFacts(item),
+          item.description ? el("p", { class: "description", text: item.description }) : null,
+          el("hr", { class: "rule" }),
+          el("h3", { text: "History" }),
+          buildHistory(history),
+          el("hr", { class: "rule" }),
+          buildSource(messages),
+          el("div", { class: "stamps", text: `Recorded ${formatTime(item.created_at)} · Updated ${formatTime(item.updated_at)}` }),
+        ]));
+      } catch (error) {
+        showError(error, () => renderItem(itemId));
+      }
+    });
+  }
+
+  // ---- routing ----
+
+  function readItemId() {
+    const match = location.hash.match(/^#\/items\/([^/]+)$/);
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  function route(reload) {
+    const itemId = readItemId();
+    if (itemId) renderItem(itemId);
+    else renderList(reload);
+  }
+
+  back.addEventListener("click", () => {
+    if (history.state && history.state.fromList) history.back();
+    else location.hash = "#/";
+  });
+  refresh.addEventListener("click", () => route(true));
+  window.addEventListener("hashchange", () => {
+    if (readItemId()) history.replaceState({ fromList: true }, "");
+    route(false);
+  });
+  route(false);
+})();
+</script>
+</body>
+</html>
